@@ -1,0 +1,41 @@
+Written-By: Til Goldan
+Written-By: Jasmine McDuffie
+Class: CS530, Spring 2024
+Assignment: 1
+User: cssc4033
+File: README
+
+=============
+File manifest
+=============
+
+Project2
+├── Makefile
+├── README
+
+===========
+Compilation
+===========
+
+This project can be compiled using the provided Makefile.
+A C++ compiler supporting c++11 is needed.
+
+Just run the following command inside the project folder:
+
+$ make
+
+=========
+Operation
+=========
+
+=====
+Notes
+=====
+
+This project uses the c++11 standard library instead of calling libc or any
+system calls directly.
+
+Line breaks are done by printing "\n" instead of using "std::endl" to
+avoid unnecessary flushes of the output buffer.
+
+No C-style casts.
