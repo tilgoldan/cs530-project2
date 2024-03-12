@@ -5,7 +5,6 @@
 # User: cssc4033
 # File: Makefile
 
-
 SRC = $(wildcard src/*.cc)
 
 BUILD_PATH = build
@@ -34,11 +33,6 @@ $(BUILD_PATH)/%.o: src/%.cc
 .PHONY: clean
 clean:
 	rm -fd $(BIN_PATH)/$(BIN_NAME) $(BIN_PATH) $(OBJECTS) $(BUILD_PATH)
-
-.PHONY: dirs
-dirs:
-	@mkdir -p $(dir $(OBJECTS))
-	@mkdir -p $(BIN_PATH)
 
 # Testing
 
