@@ -40,7 +40,7 @@ ARGS = $(BIN_NAME)
 
 .PHONY: test
 test:
-	./$(BIN_PATH)/$(BIN_NAME) $(ARGS)
+	./$(BIN_PATH)/$(BIN_NAME) tests/P2sample.sic
 
 # Remote sync and test on edoras
 

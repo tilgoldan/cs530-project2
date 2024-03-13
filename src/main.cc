@@ -8,10 +8,23 @@ File: main.cc
 */
 
 #include <iostream>
+#include <string>
+#include <vector>
+#include <memory>
 
-#include "main.hh"
+#include "ControlSection.hh"
 
 int main(int argc, char **argv) {
+  std::vector<std::shared_ptr<ControlSection>> sections;
+
+  for (int i = 1; i < argc; i++) {
+    sections.push_back(std::make_shared<ControlSection>(argv[i]));
+  }
+
+  for (auto &section : sections) {
+    section->first_pass();
+  }
+
   std::cout << "Hello, World!" << std::endl;
 
   return 0;
