@@ -22,6 +22,22 @@ void dir_start(Statement &statement, ControlSection &section) {
   int32_t location = std::stoi(operand, nullptr, 16);
   statement.set_location(location);
   section.set_location_counter(location);
+  section.set_start_address(location);
+}
+
+void dir_end(Statement &statement, ControlSection &section) {
+
+  if (section.current_pass() != Pass::FIRST) {
+    return;
+  }
+
+  if (section.location_counter() == -1) {
+    std::cerr << "Location counter is not set\n";
+    assert(false && "END directive must be after START directive");
+  }
+
+  section.set_location_counter(-1);
+  section.set_end_address(section.location_counter());
 }
 
 void dir_base(Statement &statement, ControlSection &section) {
@@ -42,8 +58,9 @@ void dir_resw(Statement &statement, ControlSection &section) {
 std::map<std::string, DirectiveHandler> &Directives::the() {
   static std::map<std::string, DirectiveHandler> s_directives = {
     {"START", dir_start},
+    {"END", dir_end},
     {"BASE", dir_base},
-    // {"RESW", dir_resw},
+    {"RESW", dir_resw},
   };
   return s_directives;
 }
