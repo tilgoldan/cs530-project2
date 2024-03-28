@@ -23,6 +23,7 @@ void dir_start(Statement &statement, ControlSection &section) {
   statement.set_location(location);
   section.set_location_counter(location);
   section.set_start_address(location);
+  section.set_name(statement.label());
 }
 
 void dir_end(Statement &statement, ControlSection &section) {
@@ -36,7 +37,6 @@ void dir_end(Statement &statement, ControlSection &section) {
     assert(false && "END directive must be after START directive");
   }
 
-  section.set_location_counter(-1);
   section.set_end_address(section.location_counter());
 }
 

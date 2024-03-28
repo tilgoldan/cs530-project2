@@ -25,7 +25,9 @@ int main(int argc, char **argv) {
     section->first_pass();
   }
 
-  std::cout << "Hello, World!" << std::endl;
+  for (auto &section : sections) {
+    section->print();
+  }
 
   return 0;
 }

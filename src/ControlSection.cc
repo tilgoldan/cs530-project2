@@ -56,33 +56,38 @@ void ControlSection::first_pass() {
 
     std::cerr << line << "\n";
 
-    Statement statement = Statement(line, m_location_counter);
+    Statement stmt = Statement(line, m_location_counter);
 
-    statement.print();
+    //stmt.print_info();
 
-    if (statement.type() == StatementType::DIRECTIVE) {
+    if (stmt.type() == StatementType::DIRECTIVE) {
       // Handle directives
-      std::cerr << "executing directive: " << statement.opcode() << std::endl;
-      auto handler = directives[statement.opcode()];
+      std::cerr << "executing directive: " << stmt.opcode() << std::endl;
+      auto handler = directives[stmt.opcode()];
       // This might modify the statement and the control section
-      handler(statement, *this);
-    } else if (statement.type() == StatementType::INVALID) {
+      handler(stmt, *this);
+    } else if (stmt.type() == StatementType::LITERAL) {
+      // Handle literals
+      // std::cerr << "Literal: " << statement << std::endl;
+    } else if (stmt.type() == StatementType::INVALID) {
       assert(false && "Invalid statement");
     } else {
       // Handle instructions
-      std::cerr << "Instruction: " << statement.opcode() << std::endl;
+      //std::cerr << "Instruction: " << stmt.opcode() << std::endl;
     }
 
     // Make sure the location counter was set by START directive
     assert(m_location_counter != -1);
 
-    if (statement.has_label()) {
-      m_labels[statement.label()] = m_location_counter;
-      std::cerr << "Label: " << statement.label() << " @ "
-                << m_location_counter << std::endl;
+    if (stmt.has_label() && stmt.type() != StatementType::LITERAL) {
+      m_labels[stmt.label()] = m_location_counter;
+      std::cerr << "Label: " << stmt.label() << " @ " << m_location_counter
+                << std::endl;
     }
 
-    m_location_counter += statement.size();
+    m_statements.push_back(stmt);
+
+    m_location_counter += stmt.size();
   }
 
   std::cerr << "ControlSection::first_pass() done" << std::endl;
@@ -94,3 +99,28 @@ void ControlSection::first_pass() {
 // 2. Generate data values defined by BYTE, WORD, etc.
 // 3. Perform processing of assembler directives not done during Pass 1.
 // 4. Write the object program and the assembly listing.
+
+void ControlSection::print() const {
+  std::cerr << "ControlSection::print()" << std::endl;
+
+  std::cerr << "Path: " << m_path << std::endl;
+  std::cerr << "Name: " << m_name << std::endl;
+  std::cerr << std::hex;
+  std::cerr << "Start address: " << m_start_address << std::endl;
+  std::cerr << "End address: " << m_end_address << std::endl;
+
+  std::cerr << "LABELS: " << std::endl;
+  for (const auto &label : m_labels) {
+    std::cerr << label.first << ":\t" << label.second << std::endl;
+  }
+
+  for (const auto &stmt : m_statements) {
+    stmt.print_assembled(std::cerr);
+  }
+
+  std::cerr << "ControlSection::print() done" << std::endl;
+}
+
+void ControlSection::print_symbol_table(std::ostream &os) const {
+
+}

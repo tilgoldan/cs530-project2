@@ -1,6 +1,8 @@
 #pragma once
 
+#include "Statement.hh"
 #include <map>
+#include <ostream>
 #include <string>
 #include <vector>
 
@@ -28,15 +30,24 @@ public:
 
   int32_t length_in_bytes() const { return m_end_address - m_start_address; }
 
+  const std::string &name() const { return m_name; }
+  void set_name(const std::string &name) { m_name = name; }
+
   Pass current_pass() const { return m_current_pass; }
 
+  void print() const;
+
+  void print_symbol_table(std::ostream&) const;
 
 private:
   const std::string m_path;
   std::string m_raw;
   std::string m_name;
 
+  std::vector<Statement> m_statements;
+
   std::map<std::string, int32_t> m_labels;
+
   int32_t m_location_counter;
   int32_t m_start_address;
   int32_t m_end_address;
