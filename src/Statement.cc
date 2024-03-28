@@ -59,9 +59,9 @@ StatementType Statement::find_type() {
       } else {
         return StatementType::FORMAT3;
       }
+    default:
+      NOT_REACHED();
     }
-
-    assert(false && "not reached");
   }
 
   std::cerr << "Invalid statement: " << mnemonic << "\n";
