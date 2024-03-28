@@ -9,12 +9,12 @@
 #include "Statement.hh"
 
 ControlSection::ControlSection(std::string path)
-    : m_path(path), m_location_counter(-1), m_current_pass(Pass::NONE),
-      m_start_address(-1), m_end_address(-1) {
+    : m_path(path), m_location_counter(-1), m_start_address(-1),
+      m_end_address(-1), m_current_pass(Pass::NONE) {
   std::cerr << "ControlSection::ControlSection(" << path << ")" << std::endl;
 
   // Read the file at path into m_raw
-  std::ifstream i_file = std::ifstream(path);
+  std::ifstream i_file(path);
 
   std::basic_ostringstream<char> os;
   os << i_file.rdbuf();
@@ -37,7 +37,7 @@ void ControlSection::first_pass() {
 
   m_current_pass = Pass::FIRST;
 
-  std::istringstream i_stream = std::istringstream(m_raw);
+  std::istringstream i_stream(m_raw);
   std::string line;
 
   auto &directives = Directives::the();
@@ -58,7 +58,7 @@ void ControlSection::first_pass() {
 
     Statement stmt = Statement(line, m_location_counter);
 
-    //stmt.print_info();
+    // stmt.print_info();
 
     if (stmt.type() == StatementType::DIRECTIVE) {
       // Handle directives
@@ -73,7 +73,7 @@ void ControlSection::first_pass() {
       assert(false && "Invalid statement");
     } else {
       // Handle instructions
-      //std::cerr << "Instruction: " << stmt.opcode() << std::endl;
+      // std::cerr << "Instruction: " << stmt.opcode() << std::endl;
     }
 
     // Make sure the location counter was set by START directive
@@ -121,6 +121,4 @@ void ControlSection::print() const {
   std::cerr << "ControlSection::print() done" << std::endl;
 }
 
-void ControlSection::print_symbol_table(std::ostream &os) const {
-
-}
+void ControlSection::print_symbol_table(std::ostream &os) const {}
