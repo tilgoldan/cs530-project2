@@ -42,17 +42,18 @@ StatementType Statement::find_type() {
     return StatementType::DIRECTIVE;
   } else if (instructions.find(mnemonic) != instructions.end()) {
     auto instr = instructions[mnemonic];
-    InstructionFormat possible_format = instr.format;
+    OperantType op_type = instr.op_type;
     AddressingMode mode = find_addressing_mode();
 
     std::cerr << "Instruction: " << mnemonic
-              << " Format: " << static_cast<int>(possible_format) << "\n";
+              << " Operant Type: " << static_cast<int>(op_type) << "\n";
 
-    if (possible_format == InstructionFormat::FORMAT1) {
-      assert(false && "FORMAT1 instructions are not supported");
-    } else if (possible_format == InstructionFormat::FORMAT2) {
-      assert(false && "FORMAT2 instructions are not supported");
-    } else if (possible_format == InstructionFormat::FORMAT3_4) {
+    switch (op_type) {
+    case OperantType::NONE:
+      return StatementType::FORMAT1;
+    case OperantType::REGISTERS:
+      return StatementType::FORMAT2;
+    case OperantType::MEMORY:
       if (mode.extended) {
         return StatementType::FORMAT4;
       } else {
