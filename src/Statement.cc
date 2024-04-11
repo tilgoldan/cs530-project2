@@ -238,7 +238,12 @@ void Statement::assemble(
   if (m_addressing_mode.indirect) {
     opcode |= 0x02;
   } else if (m_addressing_mode.immediate) {
+
     opcode |= 0x01;
+    if (m_addressing_mode.extended) {
+      flag_nibble |= 0x01;
+    }
+
     data = parse_immediate_value(symbol_table);
     // Immediate value is already in the operand
     goto output_bytes;

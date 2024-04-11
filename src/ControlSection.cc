@@ -109,6 +109,7 @@ void ControlSection::second_pass() {
       auto &directives = Directives::the();
       auto handler = directives[stmt.opcode()];
       handler(stmt, *this);
+      continue;
     } else if (stmt.type() == StatementType::INVALID) {
       assert(false && "Invalid statement");
     }
