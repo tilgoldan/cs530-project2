@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -20,6 +21,7 @@ struct AddressingMode {
   bool immediate;
   bool indexed;
   bool extended;
+  bool literal;
 };
 
 enum class LiteralFormat { CHAR, HEX, INVALID };
@@ -44,7 +46,8 @@ public:
 
   void print_info() const;
 
-  void assemble();
+  void assemble(const std::map<std::string, int32_t> &,
+                const std::map<std::string, int32_t> &, const std::string &);
 
   void print_assembled(std::ostream &) const;
 
@@ -56,6 +59,7 @@ private:
   std::string m_mnemonic;
   char m_mnemonic_prefix;
   std::string m_operand;
+  char m_operand_prefix;
 
   AddressingMode m_addressing_mode;
 
@@ -67,4 +71,6 @@ private:
   void find_size();
   void find_addressing_mode();
   void parse_literal();
+
+  int32_t parse_immediate_value(const std::map<std::string, int32_t> &);
 };

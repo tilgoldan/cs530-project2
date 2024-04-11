@@ -34,6 +34,13 @@ public:
   const std::string &name() const { return m_name; }
   void set_name(const std::string &name) { m_name = name; }
 
+  const std::string &base_relative_label() const {
+    return m_base_relative_label;
+  }
+  void set_base_relative_label(const std::string &label) {
+    m_base_relative_label = label;
+  }
+
   Pass current_pass() const { return m_current_pass; }
 
   void print() const;
@@ -48,10 +55,13 @@ private:
   std::vector<Statement> m_statements;
 
   std::map<std::string, int32_t> m_labels;
+  std::map<std::string, int32_t> m_literals;
 
   int32_t m_location_counter;
   int32_t m_start_address;
   int32_t m_end_address;
 
   Pass m_current_pass;
+
+  std::string m_base_relative_label;
 };

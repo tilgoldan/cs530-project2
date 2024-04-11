@@ -35,6 +35,14 @@ Statement::Statement(const std::string &line, int32_t location)
     m_mnemonic_prefix = ' ';
   }
 
+  if (!m_operand.empty() &&
+      (m_operand[0] == '#' || m_operand[0] == '@' || m_operand[0] == '=')) {
+    m_operand_prefix = m_operand[0];
+    m_operand = m_operand.substr(1);
+  } else {
+    m_operand_prefix = ' ';
+  }
+
   m_type = find_type();
 
   if (m_type == StatementType::LITERAL) {
@@ -59,7 +67,7 @@ StatementType Statement::find_type() {
   if (directives.find(mnemonic) != directives.end()) {
     return StatementType::DIRECTIVE;
   } else if (instructions.find(mnemonic) != instructions.end()) {
-    auto instr = instructions[mnemonic];
+    auto instr = instructions.at(mnemonic);
     OperantType op_type = instr.op_type;
     find_addressing_mode();
 
@@ -158,7 +166,34 @@ void Statement::find_size() {
   m_size = size;
 }
 
-void Statement::assemble() {
+bool is_number(const std::string &s) {
+  std::string::const_iterator it = s.begin();
+  while (it != s.end() && std::isdigit(*it))
+    ++it;
+  return !s.empty() && it == s.end();
+}
+
+int32_t Statement::parse_immediate_value(
+    const std::map<std::string, int32_t> &symbol_table) {
+
+  assert(m_addressing_mode.immediate);
+  assert(!m_operand.empty());
+
+  if (is_number(m_operand)) {
+    return std::stoi(m_operand, nullptr, 10);
+  } else {
+    auto it = symbol_table.find(m_operand);
+    if (it != symbol_table.end()) {
+      return it->second;
+    }
+  }
+
+  NOT_REACHED("Invalid immediate value");
+}
+
+void Statement::assemble(
+    const std::map<std::string, int32_t> &symbol_table,
+    const std::map<std::string, int32_t> &literal_table ,const std::string &base_register) {
   auto instructions = Instructions::the();
   auto directives = Directives::the();
 
@@ -180,33 +215,112 @@ void Statement::assemble() {
   auto instr = instructions.at(m_mnemonic);
   auto opcode = instr.opcode;
 
+  std::string operand = m_operand;
+
+  // points to the next instruction
+  int32_t ip = m_location + m_size;
+  int32_t target_address = 0;
+  int32_t flag_nibble = 0;
+
+  // Need at most 48 bits / 3 bytes (Format 4)
+  int32_t data = 0;
+  int32_t disp;
+
   std::cerr << "Instruction: " << m_mnemonic << " Opcode: " << opcode << "\n";
+  std::cerr << "Operand: " << m_operand << "\n";
   std::cerr << "Addressing Mode: "
             << "Indirect: " << m_addressing_mode.indirect
             << " Immediate: " << m_addressing_mode.immediate
             << " Indexed: " << m_addressing_mode.indexed
-            << " Extended: " << m_addressing_mode.extended << "\n";
+            << " Extended: " << m_addressing_mode.extended
+            << " Literal: " << m_addressing_mode.literal << "\n";
 
   if (m_addressing_mode.indirect) {
     opcode |= 0x02;
   } else if (m_addressing_mode.immediate) {
     opcode |= 0x01;
+    data = parse_immediate_value(symbol_table);
+    // Immediate value is already in the operand
+    goto output_bytes;
   } else {
     opcode |= 0x03;
   }
 
+  if (m_addressing_mode.indexed) {
+    flag_nibble |= 0x08;
+    // Remove ",X" from the operand
+    operand = operand.substr(0, operand.size() - 2);
+  }
+
+  if (operand.empty()) {
+    goto output_bytes;
+  }
+
+  if (m_addressing_mode.literal) {
+    std::cerr << operand << "\n";
+    target_address = literal_table.at(operand);
+  } else {
+    target_address = symbol_table.at(operand);
+  }
+
+  std::cerr << "Target Address: " << std::hex << "0x" <<target_address << "\n";
+
+  if (m_addressing_mode.extended) {
+    flag_nibble |= 0x01;
+    data = target_address;
+    goto output_bytes;
+  }
+
+  if (!base_register.empty()) {
+    int32_t base = symbol_table.at(base_register);
+    disp = target_address - base;
+
+    if (disp >= 0 && disp <= 4095) {
+      std::cerr << "Base Relative\n";
+      flag_nibble |= 0x04;
+      data = disp;
+      goto output_bytes;
+    }
+  }
+
+  std::cerr << "PC Relative\n";
+  disp = target_address - ip;
+
+  if (disp >= -2048 && disp <= 2047) {
+    flag_nibble |= 0x02;
+    data = disp;
+  } else {
+    NOT_REACHED("Not addressable address");
+  }
+
+
+  // TODO: Handle base and pc relative
+output_bytes:
   m_assembled_bytes.push_back(opcode & 0xFF);
+
+  if (m_addressing_mode.extended) {
+    m_assembled_bytes.push_back(flag_nibble << 4 | ((data >> (8 * 2)) & 0xF));
+    m_assembled_bytes.push_back((data >> (8)) & 0xFF);
+    m_assembled_bytes.push_back((data)&0xFF);
+  } else {
+    m_assembled_bytes.push_back(flag_nibble << 4 | ((data >> (8)) & 0xF));
+    m_assembled_bytes.push_back((data)&0xFF);
+  }
 }
 
 void Statement::find_addressing_mode() {
-  if (m_operand.empty()) {
-    return;
-  }
 
-  m_addressing_mode.immediate = (m_operand[0] == '#');
-  m_addressing_mode.indirect = (m_operand[0] == '@');
+  std::cerr << "Mnemonic: " << m_mnemonic << " Operand: " << m_operand <<
+  "\n"; std::cerr << "Mnemonic Prefix: " << m_mnemonic_prefix
+            << " Operand Prefix: " << m_operand_prefix << "\n";
+
+
+  
+  m_addressing_mode.immediate = (m_operand_prefix == '#');
+  m_addressing_mode.indirect = (m_operand_prefix == '@');
   m_addressing_mode.indexed = (m_operand.find(",X") != std::string::npos);
   m_addressing_mode.extended = (m_mnemonic_prefix == '+');
+  m_addressing_mode.literal = (m_operand_prefix == '=');
 }
 
 void Statement::print_info() const {
@@ -237,28 +351,23 @@ void Statement::print_assembled(std::ostream &out) const {
   out << " ";
 
   // Mnemonic
-
   out << m_mnemonic_prefix;
-  
+
   int width = 8;
-  out << std::setw(width) << std::setfill(' ') << std::left
-      << m_mnemonic;
+  out << std::setw(width) << std::setfill(' ') << std::left << m_mnemonic;
 
   out << " ";
 
   // Operand
-  char prefix = m_operand[0];
+  out << m_operand_prefix;
+
   width = 26;
-  if (prefix != '#' && prefix != '=') {
-    out << " ";
-    width--;
-  }
   out << std::setw(width) << std::setfill(' ') << std::left << m_operand;
 
   for (auto byte : m_assembled_bytes) {
     out << std::setw(2) << std::setfill('0') << std::hex << std::right
         << std::uppercase << static_cast<int>(byte);
   }
-  
+
   out << "\n";
 }

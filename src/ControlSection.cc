@@ -77,6 +77,11 @@ void ControlSection::first_pass() {
       m_labels[stmt.label()] = m_location_counter;
       std::cerr << "Label: " << stmt.label() << " @ " << m_location_counter
                 << std::endl;
+    } else if (stmt.type() == StatementType::LITERAL) {
+      // Save the value of the literal
+      std::cerr << "Literal: " << stmt.opcode() << " @ "
+                << stmt.location() << std::endl;
+      m_literals[stmt.opcode()] = stmt.location();
     }
 
     m_statements.push_back(stmt);
@@ -115,7 +120,7 @@ void ControlSection::second_pass() {
     } else {
       // Normal instruction
       // Assemble the statement
-      stmt.assemble();
+      stmt.assemble(m_labels, m_literals, m_base_relative_label);
     }
   }
 }

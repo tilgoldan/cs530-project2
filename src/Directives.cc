@@ -49,7 +49,7 @@ void dir_base(Statement &statement, ControlSection &section) {
     return;
   }
 
-  //assert(false && "BASE directive is not supported");
+  section.set_base_relative_label(statement.operand());
 }
 
 void dir_resw(Statement &statement, ControlSection &section) {
