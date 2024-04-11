@@ -4,6 +4,7 @@
 #include <ios>
 #include <iostream>
 #include <ostream>
+#include <system_error>
 
 #include "Directives.hh"
 #include "Instructions.hh"
@@ -27,6 +28,13 @@ Statement::Statement(const std::string &line, int32_t location)
   trim(m_mnemonic);
   trim(m_operand);
 
+  if (m_mnemonic[0] == '+' || m_mnemonic[0] == '=') {
+    m_mnemonic_prefix = m_mnemonic[0];
+    m_mnemonic = m_mnemonic.substr(1);
+  } else {
+    m_mnemonic_prefix = ' ';
+  }
+
   m_type = find_type();
 
   if (m_type == StatementType::LITERAL) {
@@ -48,16 +56,12 @@ StatementType Statement::find_type() {
     return StatementType::LITERAL;
   }
 
-  if (mnemonic[0] == '+') {
-    mnemonic = mnemonic.substr(1);
-  }
-
   if (directives.find(mnemonic) != directives.end()) {
     return StatementType::DIRECTIVE;
   } else if (instructions.find(mnemonic) != instructions.end()) {
     auto instr = instructions[mnemonic];
     OperantType op_type = instr.op_type;
-    AddressingMode mode = find_addressing_mode();
+    find_addressing_mode();
 
     std::cerr << "Instruction: " << mnemonic
               << " Operant Type: " << static_cast<int>(op_type) << "\n";
@@ -68,7 +72,7 @@ StatementType Statement::find_type() {
     case OperantType::REGISTERS:
       return StatementType::FORMAT2;
     case OperantType::MEMORY:
-      if (mode.extended) {
+      if (m_addressing_mode.extended) {
         return StatementType::FORMAT4;
       } else {
         return StatementType::FORMAT3;
@@ -85,11 +89,9 @@ StatementType Statement::find_type() {
 void Statement::parse_literal() {
   assert(m_label == "*");
 
-  auto data = m_mnemonic;
-
   // Starting '='
-  assert(data[0] == '=');
-  data = data.substr(1);
+  assert(m_mnemonic_prefix == '=');
+  auto data = m_mnemonic;
 
   // Format
   LiteralFormat format;
@@ -156,19 +158,55 @@ void Statement::find_size() {
   m_size = size;
 }
 
-AddressingMode Statement::find_addressing_mode() {
-  AddressingMode mode;
+void Statement::assemble() {
+  auto instructions = Instructions::the();
+  auto directives = Directives::the();
 
-  if (m_operand.empty()) {
-    return mode;
+  switch (m_type) {
+  case StatementType::LITERAL:
+  case StatementType::DIRECTIVE: {
+    return;
+  }
+  case StatementType::FORMAT0: {
+    assert(false && "SIC Basic Instruction Format is not supported");
+  }
+  case StatementType::INVALID: {
+    assert(false && "Invalid statement");
+  }
+  default:
+    break;
   }
 
-  mode.immediate = (m_operand[0] == '#');
-  mode.indirect = (m_operand[0] == '@');
-  mode.indexed = (m_operand.find(",X") != std::string::npos);
-  mode.extended = (m_mnemonic[0] == '+');
+  auto instr = instructions.at(m_mnemonic);
+  auto opcode = instr.opcode;
 
-  return mode;
+  std::cerr << "Instruction: " << m_mnemonic << " Opcode: " << opcode << "\n";
+  std::cerr << "Addressing Mode: "
+            << "Indirect: " << m_addressing_mode.indirect
+            << " Immediate: " << m_addressing_mode.immediate
+            << " Indexed: " << m_addressing_mode.indexed
+            << " Extended: " << m_addressing_mode.extended << "\n";
+
+  if (m_addressing_mode.indirect) {
+    opcode |= 0x02;
+  } else if (m_addressing_mode.immediate) {
+    opcode |= 0x01;
+  } else {
+    opcode |= 0x03;
+  }
+
+  m_assembled_bytes.push_back(opcode & 0xFF);
+}
+
+void Statement::find_addressing_mode() {
+  if (m_operand.empty()) {
+    return;
+  }
+
+  m_addressing_mode.immediate = (m_operand[0] == '#');
+  m_addressing_mode.indirect = (m_operand[0] == '@');
+  m_addressing_mode.indexed = (m_operand.find(",X") != std::string::npos);
+  m_addressing_mode.extended = (m_mnemonic_prefix == '+');
 }
 
 void Statement::print_info() const {
@@ -188,7 +226,7 @@ void Statement::print_assembled(std::ostream &out) const {
     out << "    ";
   } else {
     out << std::hex << std::uppercase << std::setw(4) << std::setfill('0')
-        << m_location;
+        << std::right << m_location;
   }
 
   out << "    ";
@@ -199,18 +237,17 @@ void Statement::print_assembled(std::ostream &out) const {
   out << " ";
 
   // Mnemonic
-  auto prefix = m_mnemonic[0];
+
+  out << m_mnemonic_prefix;
+  
   int width = 8;
-  if (prefix != '+' && prefix != '=') {
-    out << " ";
-    width--;
-  }
-  out << std::setw(width) << std::setfill(' ') << std::left << m_mnemonic;
+  out << std::setw(width) << std::setfill(' ') << std::left
+      << m_mnemonic;
 
   out << " ";
 
   // Operand
-  prefix = m_operand[0];
+  char prefix = m_operand[0];
   width = 26;
   if (prefix != '#' && prefix != '=') {
     out << " ";
@@ -219,7 +256,7 @@ void Statement::print_assembled(std::ostream &out) const {
   out << std::setw(width) << std::setfill(' ') << std::left << m_operand;
 
   for (auto byte : m_assembled_bytes) {
-    out << std::setw(2) << std::setfill('0') << std::hex
+    out << std::setw(2) << std::setfill('0') << std::hex << std::right
         << std::uppercase << static_cast<int>(byte);
   }
   

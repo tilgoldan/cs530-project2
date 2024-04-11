@@ -26,6 +26,10 @@ int main(int argc, char **argv) {
   }
 
   for (auto &section : sections) {
+    section->second_pass();
+  }
+
+  for (auto &section : sections) {
     section->print();
   }
 

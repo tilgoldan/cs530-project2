@@ -18,6 +18,7 @@ public:
   ~ControlSection() = default;
 
   void first_pass();
+  void second_pass();
 
   int32_t location_counter() const { return m_location_counter; }
   void set_location_counter(int32_t location) { m_location_counter = location; }

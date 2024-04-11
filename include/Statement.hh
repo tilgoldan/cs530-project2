@@ -44,6 +44,8 @@ public:
 
   void print_info() const;
 
+  void assemble();
+
   void print_assembled(std::ostream &) const;
 
 private:
@@ -52,7 +54,10 @@ private:
   StatementType m_type;
   std::string m_label;
   std::string m_mnemonic;
+  char m_mnemonic_prefix;
   std::string m_operand;
+
+  AddressingMode m_addressing_mode;
 
   std::vector<uint8_t> m_assembled_bytes;
 
@@ -60,6 +65,6 @@ private:
 
   StatementType find_type();
   void find_size();
-  AddressingMode find_addressing_mode();
+  void find_addressing_mode();
   void parse_literal();
 };
