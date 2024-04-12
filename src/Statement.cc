@@ -29,7 +29,7 @@ Statement::Statement(const std::string &line, int32_t location)
   size_t length = line.size();
 
   if (length > 17) {
-    m_operand = line.substr(17, length - 17);
+    m_operand = line.substr(17, 24);
   }
 
   trim(m_label);

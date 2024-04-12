@@ -69,7 +69,7 @@ int32_t ControlSection::get_label(const std::string name) const {
   }
 
   return -1;
-};
+}
 
 // Pass 1 (define symbols) :
 // 1. Assign addresses to all statements in the program.

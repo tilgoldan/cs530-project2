@@ -94,7 +94,7 @@ void dir_byte(Statement &statement, ControlSection &section) {
 }
 
 void dir_ltorg(Statement &statement, ControlSection &section) {
-  (void)section;
+  (void)statement;
 
   if (section.current_pass() != Pass::FIRST) {
     return;

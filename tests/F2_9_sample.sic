@@ -1,4 +1,5 @@
-COPY      START   0             COPY FILE FROM INPUT TO OUTPUT
+. Figure 2.9 Program demonstrating additional assembler features.
+COPY      START   0                      COPY FILE FROM INPUT TO OUTPUT
 FIRST     STL     RETADR
           LDB    #LENGTH
           BASE    LENGTH
