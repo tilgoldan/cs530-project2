@@ -1,3 +1,11 @@
+/*
+Written-By: Til Goldan
+Written-By: Jasmine McDuffie
+Class: CS530, Spring 2024
+Assignment: 2
+User: cssc4033
+File: Statement.cc
+*/
 
 #include <cassert>
 #include <iomanip>
@@ -164,13 +172,6 @@ void Statement::find_size() {
   }
 
   m_size = size;
-}
-
-bool is_number(const std::string &s) {
-  std::string::const_iterator it = s.begin();
-  while (it != s.end() && std::isdigit(*it))
-    ++it;
-  return !s.empty() && it == s.end();
 }
 
 int32_t Statement::parse_immediate_value(

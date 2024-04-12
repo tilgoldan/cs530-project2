@@ -1,3 +1,11 @@
+/*
+Written-By: Til Goldan
+Written-By: Jasmine McDuffie
+Class: CS530, Spring 2024
+Assignment: 2
+User: cssc4033
+File: Literal.hh
+*/
 #pragma once
 
 #include <string>
