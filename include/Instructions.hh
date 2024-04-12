@@ -18,4 +18,5 @@ struct InstructionInfo {
 class Instructions {
 public:
   static std::map<std::string, InstructionInfo> &the();
+  static std::map<std::string, int32_t> &regs();
 };

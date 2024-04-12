@@ -41,7 +41,10 @@ public:
     m_base_relative_label = label;
   }
 
-  void define_pending_literals();
+  void define_label(const std::string, int32_t);
+  int32_t get_label(const std::string) const;
+  
+  void process_pending_literals_next() { m_process_pending_literals = true; };
 
   Pass current_pass() const { return m_current_pass; }
 
@@ -60,6 +63,7 @@ private:
 
   std::map<std::string, int32_t> m_literals;
   std::vector<std::string> m_pending_literals;
+  bool m_process_pending_literals;
 
   int32_t m_location_counter;
   int32_t m_start_address;
@@ -68,4 +72,6 @@ private:
   Pass m_current_pass;
 
   std::string m_base_relative_label;
+
+  void define_pending_literals();
 };

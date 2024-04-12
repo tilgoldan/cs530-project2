@@ -39,7 +39,7 @@ void dir_end(Statement &statement, ControlSection &section) {
     assert(false && "END directive must be after START directive");
   }
 
-  section.define_pending_literals();
+  section.process_pending_literals_next();
 
   section.set_end_address(section.location_counter());
 }
@@ -91,26 +91,35 @@ void dir_ltorg(Statement &statement, ControlSection &section) {
     return;
   }
 
-  section.define_pending_literals();
+  section.process_pending_literals_next();
 }
 
 void dir_equ(Statement &statement, ControlSection &section) {
   (void)statement;
-  (void)section;
+
+  if (section.current_pass() != Pass::FIRST) {
+    return;
+  }
 
   std::cerr << "TODO: EQU\n";
+
+  if (statement.operand() == "*") {
+    // Set the label to the current location counter
+    section.define_label(statement.label(), section.location_counter());
+  } else {
+    // Evaluate the expression
+    // TODO
+    section.define_label(statement.label(), 0xdeadc0de);
+  }
+
+
 }
 
 std::map<std::string, DirectiveHandler> &Directives::the() {
   static std::map<std::string, DirectiveHandler> s_directives = {
-    {"START", dir_start},
-    {"END", dir_end},
-    {"BASE", dir_base},
-    {"RESW", dir_resw},
-    {"RESB", dir_resb},
-    {"BYTE", dir_byte},
-    {"LTORG", dir_ltorg},
-      {"EQU", dir_equ},
+      {"START", dir_start}, {"END", dir_end},   {"BASE", dir_base},
+      {"RESW", dir_resw},   {"RESB", dir_resb}, {"BYTE", dir_byte},
+      {"LTORG", dir_ltorg}, {"EQU", dir_equ},
   };
   return s_directives;
 }

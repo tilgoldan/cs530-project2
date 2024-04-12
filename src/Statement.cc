@@ -55,8 +55,8 @@ Statement::Statement(const std::string &line, int32_t location)
 }
 
 StatementType Statement::find_type() {
-  auto directives = Directives::the();
-  auto instructions = Instructions::the();
+  const auto &directives = Directives::the();
+  const auto &instructions = Instructions::the();
 
   auto mnemonic = m_mnemonic;
 
@@ -191,28 +191,45 @@ int32_t Statement::parse_immediate_value(
   NOT_REACHED("Invalid immediate value");
 }
 
-void Statement::assemble(
+void Statement::assemble_register_instruction() {
+  assert(m_type == StatementType::FORMAT2);
+  assert(m_operand.size() >= 1);
+
+  const auto &instructions = Instructions::the();
+  auto &instr = instructions.at(m_mnemonic);
+  auto opcode = instr.opcode;
+
+  const auto &regs = Instructions::regs();
+  auto op = m_operand;
+
+  int32_t r1 = 0;
+  int32_t r2 = 0;
+
+  if (op.find(",") != std::string::npos) {
+    auto pos = op.find(",");
+
+    auto r1_str = op.substr(0, pos);
+    auto r2_str = op.substr(pos + 1);
+
+    r1 = regs.at(r1_str);
+    r2 = regs.at(r2_str);
+  } else {
+    r1 = regs.at(op);
+  }
+
+  m_assembled_bytes.push_back(opcode);
+  m_assembled_bytes.push_back(r1 << 4 | r2);
+}
+
+void Statement::assemble_memory_instruction(
     const std::map<std::string, int32_t> &symbol_table,
-    const std::map<std::string, int32_t> &literal_table ,const std::string &base_register) {
-  auto instructions = Instructions::the();
-  auto directives = Directives::the();
+    const std::map<std::string, int32_t> &literal_table,
+    const std::string &base_register) {
 
-  switch (m_type) {
-  case StatementType::LITERAL:
-  case StatementType::DIRECTIVE: {
-    return;
-  }
-  case StatementType::FORMAT0: {
-    assert(false && "SIC Basic Instruction Format is not supported");
-  }
-  case StatementType::INVALID: {
-    assert(false && "Invalid statement");
-  }
-  default:
-    break;
-  }
+  assert(m_type == StatementType::FORMAT3 || m_type == StatementType::FORMAT4);
 
-  auto instr = instructions.at(m_mnemonic);
+  const auto &instructions = Instructions::the();
+  auto& instr = instructions.at(m_mnemonic);
   auto opcode = instr.opcode;
 
   std::string operand = m_operand;
@@ -220,29 +237,9 @@ void Statement::assemble(
   // points to the next instruction
   int32_t ip = m_location + m_size;
   int32_t target_address = 0;
-  int32_t flag_nibble = 0;
-
-  // Need at most 48 bits / 3 bytes (Format 4)
-  int32_t data = 0;
   int32_t disp;
-
-  std::cerr << "Instruction: " << m_mnemonic << " Opcode: " << opcode << "\n";
-  std::cerr << "Operand: " << m_operand << "\n";
-  std::cerr << "Addressing Mode: "
-            << "Indirect: " << m_addressing_mode.indirect
-            << " Immediate: " << m_addressing_mode.immediate
-            << " Indexed: " << m_addressing_mode.indexed
-            << " Extended: " << m_addressing_mode.extended
-            << " Literal: " << m_addressing_mode.literal << "\n";
-
-  if (m_type == StatementType::FORMAT1) {
-    m_assembled_bytes.push_back(opcode | 0x3);
-    return;
-  } else if (m_type == StatementType::FORMAT2) {
-    NOT_IMPLEMENTED("Format 2");
-  }
-
-  // Format 3/4
+  int32_t flag_nibble = 0;
+  int32_t data = 0;
 
   if (m_addressing_mode.indirect) {
     opcode |= 0x02;
@@ -276,7 +273,7 @@ void Statement::assemble(
     target_address = symbol_table.at(operand);
   }
 
-  std::cerr << "Target Address: " << std::hex << "0x" <<target_address << "\n";
+  std::cerr << "Target Address: " << std::hex << "0x" << target_address << "\n";
 
   if (m_addressing_mode.extended) {
     flag_nibble |= 0x01;
@@ -306,11 +303,10 @@ void Statement::assemble(
     NOT_REACHED("Not addressable address");
   }
 
-
-  // TODO: Handle base and pc relative
 output_bytes:
+
   m_assembled_bytes.push_back(opcode & 0xFF);
-  
+
   if (m_addressing_mode.extended) {
     m_assembled_bytes.push_back(flag_nibble << 4 | ((data >> (8 * 2)) & 0xF));
     m_assembled_bytes.push_back((data >> (8)) & 0xFF);
@@ -321,14 +317,54 @@ output_bytes:
   }
 }
 
+void Statement::assemble(const std::map<std::string, int32_t> &symbol_table,
+                         const std::map<std::string, int32_t> &literal_table,
+                         const std::string &base_register) {
+  const auto& instructions = Instructions::the();
+
+  switch (m_type) {
+  case StatementType::LITERAL:
+  case StatementType::DIRECTIVE: {
+    return;
+  }
+  case StatementType::FORMAT0: {
+    assert(false && "SIC Basic Instruction Format is not supported");
+  }
+  case StatementType::FORMAT1: {
+    auto instr = instructions.at(m_mnemonic);
+    auto opcode = instr.opcode;
+    m_assembled_bytes.push_back(opcode);
+    break;
+  }
+  case StatementType::FORMAT2: {
+    assemble_register_instruction();
+    break;
+  }
+  case StatementType::FORMAT3:
+  case StatementType::FORMAT4: {
+    assemble_memory_instruction(symbol_table, literal_table, base_register);
+    break;
+  }
+  default:
+    NOT_REACHED("Invalid statement");
+  }
+
+  // std::cerr << "Instruction: " << m_mnemonic << " Opcode: " << opcode <<
+  // "\n"; std::cerr << "Operand: " << m_operand << "\n"; std::cerr <<
+  // "Addressing Mode: "
+  //           << "Indirect: " << m_addressing_mode.indirect
+  //           << " Immediate: " << m_addressing_mode.immediate
+  //           << " Indexed: " << m_addressing_mode.indexed
+  //           << " Extended: " << m_addressing_mode.extended
+  //           << " Literal: " << m_addressing_mode.literal << "\n";
+}
+
 void Statement::find_addressing_mode() {
 
-  std::cerr << "Mnemonic: " << m_mnemonic << " Operand: " << m_operand <<
-  "\n"; std::cerr << "Mnemonic Prefix: " << m_mnemonic_prefix
+  std::cerr << "Mnemonic: " << m_mnemonic << " Operand: " << m_operand << "\n";
+  std::cerr << "Mnemonic Prefix: " << m_mnemonic_prefix
             << " Operand Prefix: " << m_operand_prefix << "\n";
 
-
-  
   m_addressing_mode.immediate = (m_operand_prefix == '#');
   m_addressing_mode.indirect = (m_operand_prefix == '@');
   m_addressing_mode.indexed = (m_operand.find(",X") != std::string::npos);
@@ -349,7 +385,7 @@ void Statement::print_info() const {
 void Statement::print_assembled(std::ostream &out) const {
 
   // Location
-  if (m_mnemonic == "END") {
+  if (m_mnemonic == "END" || m_mnemonic == "LTORG" || m_mnemonic == "END") {
     out << "    ";
   } else {
     out << std::hex << std::uppercase << std::setw(4) << std::setfill('0')

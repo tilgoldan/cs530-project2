@@ -75,4 +75,9 @@ private:
   void parse_literal();
 
   int32_t parse_immediate_value(const std::map<std::string, int32_t> &);
+
+  void assemble_register_instruction();
+  void assemble_memory_instruction(const std::map<std::string, int32_t> &,
+                                      const std::map<std::string, int32_t> &,
+                                      const std::string &);
 };

@@ -7,7 +7,7 @@
 000A    LOOP     ADD      TABLE,X                  1BA017
 000D             ADD      TABLE2,X                 1BC000
 0010             TIX      COUNT                    2F200E
-0013             JLT      LOOP                     3B2FF3
+0013             JLT      LOOP                     3B2FF4
 0016            +STA      TOTAL                    0F102F04
 001A             RSUB                              4F0000
 001D    MYLIT   +LDA     =C'EOF'                   03102F07

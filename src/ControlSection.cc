@@ -50,6 +50,18 @@ void ControlSection::define_pending_literals() {
   m_pending_literals.clear();
 }
 
+void ControlSection::define_label(const std::string name, int32_t address) {
+  m_labels[name] = address;
+}
+
+int32_t ControlSection::get_label(const std::string name) const {
+  if (m_labels.find(name) != m_labels.end()) {
+    return m_labels.at(name);
+  }
+
+  return -1;
+};
+
 // Pass 1 (define symbols) :
 // 1. Assign addresses to all statements in the program.
 // 2. Save the values(addresses) assigned to all labels for use in Pass .2
@@ -100,22 +112,18 @@ void ControlSection::first_pass() {
     // Make sure the location counter was set by START directive
     assert(m_location_counter != -1);
 
-    if (stmt.has_label() && stmt.type() != StatementType::LITERAL) {
+    if (stmt.has_label() && stmt.type() != StatementType::LITERAL &&
+        stmt.opcode() != "EQU") {
 
-      if (m_labels.find(stmt.label()) != m_labels.end()) {
+      if (get_label(stmt.label()) != -1) {
         std::cerr << "Duplicate label: " << stmt.label() << std::endl;
         assert(false && "Duplicate label");
       }
 
-      m_labels[stmt.label()] = m_location_counter;
+      define_label(stmt.label(), m_location_counter);
       std::cerr << "Label: " << stmt.label() << " @ " << m_location_counter
                 << std::endl;
 
-      if (stmt.operand_prefix() == '=' && m_literals.find(stmt.operand()) == m_literals.end()) {
-        // Save the literal for later
-        m_pending_literals.push_back(stmt.operand());
-      }
-      
     } else if (stmt.type() == StatementType::LITERAL) {
       // Save the value of the literal
       std::cerr << "Literal: " << stmt.opcode() << " @ "
@@ -123,9 +131,20 @@ void ControlSection::first_pass() {
       m_literals[stmt.opcode()] = stmt.location();
     }
 
-    m_statements.push_back(stmt);
+    // Handle literals in the operand field
+    if (stmt.operand_prefix() == '=' &&
+        m_literals.find(stmt.operand()) == m_literals.end()) {
+      // Save the literal for later
+      m_pending_literals.push_back(stmt.operand());
+    }
 
+    m_statements.push_back(stmt);
     m_location_counter += stmt.size();
+
+    if (m_process_pending_literals) {
+      define_pending_literals();
+      m_process_pending_literals = false;
+    }
   }
 
   std::cerr << "ControlSection::first_pass() done" << std::endl;
