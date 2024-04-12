@@ -41,6 +41,8 @@ public:
     m_base_relative_label = label;
   }
 
+  void define_pending_literals();
+
   Pass current_pass() const { return m_current_pass; }
 
   void print() const;
@@ -55,7 +57,9 @@ private:
   std::vector<Statement> m_statements;
 
   std::map<std::string, int32_t> m_labels;
+
   std::map<std::string, int32_t> m_literals;
+  std::vector<std::string> m_pending_literals;
 
   int32_t m_location_counter;
   int32_t m_start_address;

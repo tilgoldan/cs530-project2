@@ -235,10 +235,18 @@ void Statement::assemble(
             << " Extended: " << m_addressing_mode.extended
             << " Literal: " << m_addressing_mode.literal << "\n";
 
+  if (m_type == StatementType::FORMAT1) {
+    m_assembled_bytes.push_back(opcode | 0x3);
+    return;
+  } else if (m_type == StatementType::FORMAT2) {
+    NOT_IMPLEMENTED("Format 2");
+  }
+
+  // Format 3/4
+
   if (m_addressing_mode.indirect) {
     opcode |= 0x02;
   } else if (m_addressing_mode.immediate) {
-
     opcode |= 0x01;
     if (m_addressing_mode.extended) {
       flag_nibble |= 0x01;
@@ -302,7 +310,7 @@ void Statement::assemble(
   // TODO: Handle base and pc relative
 output_bytes:
   m_assembled_bytes.push_back(opcode & 0xFF);
-
+  
   if (m_addressing_mode.extended) {
     m_assembled_bytes.push_back(flag_nibble << 4 | ((data >> (8 * 2)) & 0xF));
     m_assembled_bytes.push_back((data >> (8)) & 0xFF);

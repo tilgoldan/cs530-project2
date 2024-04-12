@@ -3,6 +3,7 @@
 #include <ios>
 #include <iostream>
 #include <sstream>
+#include <string>
 
 #include "ControlSection.hh"
 #include "Directives.hh"
@@ -21,6 +22,32 @@ ControlSection::ControlSection(std::string path)
   m_raw = os.str();
 
   std::cerr << "Read " << m_raw.size() << " bytes from " << path << std::endl;
+}
+
+
+void ControlSection::define_pending_literals() {
+  for (const auto &literal : m_pending_literals) {
+    if (m_literals.find(literal) != m_literals.end()) {
+      // Already defined
+      continue;
+    }
+
+    std::cerr << "Defining pending literal: " << literal << std::endl;
+
+    std::stringstream ss;
+
+    ss << "*        =";
+    ss << literal;
+
+    std::string line = ss.str();
+
+    Statement stmt = Statement(line, m_location_counter);
+    m_location_counter += stmt.size();
+    m_literals[stmt.opcode()] = stmt.location();
+    m_statements.push_back(stmt);
+  }
+
+  m_pending_literals.clear();
 }
 
 // Pass 1 (define symbols) :
@@ -74,9 +101,21 @@ void ControlSection::first_pass() {
     assert(m_location_counter != -1);
 
     if (stmt.has_label() && stmt.type() != StatementType::LITERAL) {
+
+      if (m_labels.find(stmt.label()) != m_labels.end()) {
+        std::cerr << "Duplicate label: " << stmt.label() << std::endl;
+        assert(false && "Duplicate label");
+      }
+
       m_labels[stmt.label()] = m_location_counter;
       std::cerr << "Label: " << stmt.label() << " @ " << m_location_counter
                 << std::endl;
+
+      if (stmt.operand_prefix() == '=' && m_literals.find(stmt.operand()) == m_literals.end()) {
+        // Save the literal for later
+        m_pending_literals.push_back(stmt.operand());
+      }
+      
     } else if (stmt.type() == StatementType::LITERAL) {
       // Save the value of the literal
       std::cerr << "Literal: " << stmt.opcode() << " @ "

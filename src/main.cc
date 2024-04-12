@@ -25,9 +25,9 @@ int main(int argc, char **argv) {
     section->first_pass();
   }
 
-  for (auto &section : sections) {
-    section->second_pass();
-  }
+  // for (auto &section : sections) {
+  //   section->second_pass();
+  // }
 
   for (auto &section : sections) {
     section->print();

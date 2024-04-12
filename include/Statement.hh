@@ -37,7 +37,9 @@ public:
   StatementType type() const { return m_type; }
   const std::string &label() const { return m_label; }
   const std::string &opcode() const { return m_mnemonic; }
+  char opcode_prefix() const { return m_mnemonic_prefix; }
   const std::string &operand() const { return m_operand; }
+  char operand_prefix() const { return m_operand_prefix; }
   int32_t size() const { return m_size; }
   void set_size(int32_t size) { m_size = size; }
 
