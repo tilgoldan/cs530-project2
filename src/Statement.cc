@@ -224,6 +224,17 @@ void Statement::assemble_register_instruction() {
   m_assembled_bytes.push_back(r1 << 4 | r2);
 }
 
+void Statement::bytes_from_direct_value(int32_t value) {
+  int32_t shift = 8 * (m_size - 1);
+
+  for (int32_t i = 0; i < m_size; i++) {
+    m_assembled_bytes.push_back((value >> shift) & 0xFF);
+    shift -= 8;
+  }
+
+  assert(m_assembled_bytes.size() == m_size);
+}
+
 void Statement::assemble_memory_instruction(const SymbolTab &symbol_table,
                                             const LiteralTab &literal_table,
                                             const std::string &base_register) {

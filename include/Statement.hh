@@ -58,7 +58,8 @@ public:
 
   void assemble(const SymbolTab &, const LiteralTab &, const std::string &);
 
-  const std::vector<uint8_t>& bytes() const { return m_assembled_bytes;}
+  const std::vector<uint8_t> &bytes() const { return m_assembled_bytes; }
+  void bytes_from_direct_value(int32_t value);
 
   void print_assembled(std::ostream &) const;
   void parse_literal_data(std::string);

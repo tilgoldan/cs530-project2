@@ -167,7 +167,15 @@ void word(Statement &statement, ControlSection &section) {
     return;
   }
 
-  statement.parse_literal_data(statement.operand());
+  const auto& op = statement.operand();
+
+  if (op[1] == '\'') {
+    // Format of "X'...'" or "C'...'""
+    statement.parse_literal_data(statement.operand());
+  } else {
+    auto value = parse_value(op, section);
+    statement.bytes_from_direct_value(value.value());
+  }
 
   assert(statement.bytes().size() == 3 && "Invalid word directive");
 }
@@ -188,7 +196,15 @@ void byte(Statement &statement, ControlSection &section) {
     return;
   }
 
-  statement.parse_literal_data(statement.operand());
+  const auto &op = statement.operand();
+
+  if (op[1] == '\'') {
+    // Format of "X'...'" or "C'...'""
+    statement.parse_literal_data(statement.operand());
+  } else {
+    auto value = parse_value(op, section);
+    statement.bytes_from_direct_value(value.value());
+  }
 
   assert(statement.bytes().size() == 1 && "Invalid byte directive");
 }
