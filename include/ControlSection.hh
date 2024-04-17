@@ -49,6 +49,8 @@ public:
   const std::string &name() const { return m_name; }
   void set_name(const std::string &name) { m_name = name; }
 
+  const std::string &path() const { return m_path; }
+
   const std::string &base_relative_label() const {
     return m_base_relative_label;
   }

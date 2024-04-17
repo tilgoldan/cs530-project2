@@ -7,6 +7,7 @@ User: cssc4033
 File: main.cc
 */
 
+#include <fstream>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -32,6 +33,15 @@ int main(int argc, char **argv) {
   for (auto &section : sections) {
     section->print_listing(std::cout);
     section->print_tables(std::cout);
+
+    auto file_base = section->path();
+    file_base = file_base.substr(0, file_base.size() - 4);
+
+    std::ofstream o_listing = std::ofstream(file_base + ".l");
+    section->print_listing(o_listing);
+
+    std::ofstream o_tables = std::ofstream(file_base + ".st");
+    section->print_tables(o_tables);
   }
 
   return 0;

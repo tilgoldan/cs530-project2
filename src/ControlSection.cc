@@ -29,6 +29,12 @@ ControlSection::ControlSection(std::string path)
       m_end_address(-1), m_current_pass(Pass::NONE) {
   std::cerr << "ControlSection::ControlSection(" << path << ")" << std::endl;
 
+  // Check path ends with '.sic'
+  if (path.size() < 4 || path.substr(path.size() - 4) != ".sic") {
+    std::cerr << "Invalid path: " << path << std::endl;
+    assert(false && "Invalid file extension");
+  }
+  
   // Read the file at path into m_raw
   std::ifstream i_file(path);
 
@@ -272,7 +278,7 @@ void ControlSection::print_tables(std::ostream &os) const {
        << info->address();
     os << " ";
     os << std::setw(0) << std::dec << info->length();
-
+    os << "\n";
   };
 
   os << "\n";
