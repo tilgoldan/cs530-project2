@@ -23,8 +23,6 @@ void start(Statement &statement, ControlSection &section) {
   }
 
   if (section.location_counter() != -1) {
-    std::cerr << "Location counter is already set to "
-              << section.location_counter() << "\n";
     section.assembler_error("There can only be one START directive", statement);
   }
 
@@ -45,7 +43,6 @@ void end(Statement &statement, ControlSection &section) {
   }
 
   if (section.location_counter() == -1) {
-    std::cerr << "Location counter is not set\n";
     section.assembler_error("END directive without a START directive",
                             statement);
   }
@@ -182,7 +179,7 @@ void extref(Statement &statement, ControlSection &section) {
 void extdef(Statement &statement, ControlSection &section) {
   (void)statement;
   (void)section;
-  std::cerr << "TODO: extdef\n";
+  // Nothing to do here
 }
 
 std::map<std::string, DirectiveHandler> &Directives::the() {

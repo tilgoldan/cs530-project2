@@ -28,11 +28,9 @@ File: ControlSection.cc
 ControlSection::ControlSection(std::string path)
     : m_path(path), m_location_counter(-1), m_start_address(-1),
       m_end_address(-1), m_current_pass(Pass::NONE) {
-  std::cerr << "ControlSection::ControlSection(" << path << ")" << std::endl;
 
   // Check path ends with '.sic'
   if (path.size() < 4 || path.substr(path.size() - 4) != ".sic") {
-    std::cerr << "Invalid path: " << path << std::endl;
     assembler_error("Invalid file extension");
   }
 
@@ -52,8 +50,6 @@ void ControlSection::define_pending_literals() {
       // Already defined
       continue;
     }
-
-    std::cerr << "Defining pending literal: " << it.first << std::endl;
 
     std::stringstream ss;
 
@@ -195,8 +191,6 @@ SymbolInfo ControlSection::parse_value(const std::string &s) const {
 // Symbol length = 6 Byte
 
 void ControlSection::first_pass() {
-  std::cerr << "ControlSection::first_pass()" << std::endl;
-
   m_current_pass = Pass::FIRST;
 
   std::istringstream i_stream(m_raw);
@@ -224,8 +218,6 @@ void ControlSection::first_pass() {
     if (line[0] == '.') {
       continue;
     }
-
-    std::cerr << line << "\n";
 
     Statement stmt = Statement(line, m_location_counter, line_number);
 
@@ -276,6 +268,8 @@ void ControlSection::first_pass() {
   if (m_statements.size() == 0) {
     assembler_error("No statements found");
   }
+
+  std::cout << "Pass 1 complete for " << m_path << std::endl;
 }
 
 // Pass 2 (assemble instructions and generate object program):
@@ -286,8 +280,6 @@ void ControlSection::first_pass() {
 // 4. Write the object program and the assembly listing.
 
 void ControlSection::second_pass() {
-  std::cerr << "ControlSection::second_pass()" << std::endl;
-
   m_current_pass = Pass::SECOND;
 
   for (auto &stmt : m_statements) {
@@ -310,22 +302,14 @@ void ControlSection::second_pass() {
       stmt.assemble(*this);
     }
   }
+
+  std::cout << "Pass 2 complete for " << m_path << std::endl;
 }
 
-void ControlSection::print_listing(std::ostream &os) const {
-  std::cerr << "ControlSection::print()" << std::endl;
-
-  std::cerr << "Path: " << m_path << std::endl;
-  std::cerr << "Name: " << m_name << std::endl;
-  std::cerr << std::hex;
-  std::cerr << "Start address: " << m_start_address << std::endl;
-  std::cerr << "End address: " << m_end_address << std::endl;
-
+void ControlSection::print_object_code(std::ostream &os) const {
   for (const auto &stmt : m_statements) {
     stmt.print_assembled(os);
   }
-
-  std::cerr << "ControlSection::print() done" << std::endl;
 }
 
 void ControlSection::print_tables(std::ostream &os) const {

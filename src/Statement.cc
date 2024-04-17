@@ -85,9 +85,6 @@ StatementType Statement::find_type() {
     OperantType op_type = instr.op_type;
     find_addressing_mode();
 
-    std::cerr << "Instruction: " << mnemonic
-              << " Operant Type: " << static_cast<int>(op_type) << "\n";
-
     switch (op_type) {
     case OperantType::NONE:
       return StatementType::FORMAT1;
@@ -104,7 +101,6 @@ StatementType Statement::find_type() {
     }
   }
 
-  std::cerr << "Invalid statement: " << mnemonic << "\n";
   return StatementType::INVALID;
 }
 
@@ -364,23 +360,9 @@ void Statement::assemble(const ControlSection &section) {
   default:
     section.assembler_error("Invalid statement", *this);
   }
-
-  // std::cerr << "Instruction: " << m_mnemonic << " Opcode: " << opcode <<
-  // "\n"; std::cerr << "Operand: " << m_operand << "\n"; std::cerr <<
-  // "Addressing Mode: "
-  //           << "Indirect: " << m_addressing_mode.indirect
-  //           << " Immediate: " << m_addressing_mode.immediate
-  //           << " Indexed: " << m_addressing_mode.indexed
-  //           << " Extended: " << m_addressing_mode.extended
-  //           << " Literal: " << m_addressing_mode.literal << "\n";
 }
 
 void Statement::find_addressing_mode() {
-
-  std::cerr << "Mnemonic: " << m_mnemonic << " Operand: " << m_operand << "\n";
-  std::cerr << "Mnemonic Prefix: " << m_mnemonic_prefix
-            << " Operand Prefix: " << m_operand_prefix << "\n";
-
   m_addressing_mode.immediate = (m_operand_prefix == '#');
   m_addressing_mode.indirect = (m_operand_prefix == '@');
   m_addressing_mode.indexed = (m_operand.find(",X") != std::string::npos);

@@ -31,17 +31,16 @@ int main(int argc, char **argv) {
   }
 
   for (auto &section : sections) {
-    section->print_listing(std::cout);
-    section->print_tables(std::cout);
-
     auto file_base = section->path();
     file_base = file_base.substr(0, file_base.size() - 4);
 
     std::ofstream o_listing (file_base + ".l");
-    section->print_listing(o_listing);
+    section->print_object_code(o_listing);
+    std::cout << "Wrote object code: " << file_base << ".l\n";
 
     std::ofstream o_tables (file_base + ".st");
     section->print_tables(o_tables);
+    std::cout << "Wrote symbol table: " << file_base << ".st\n";
   }
 
   return 0;

@@ -73,7 +73,7 @@ public:
 
   Pass current_pass() const { return m_current_pass; }
 
-  void print_listing(std::ostream &os) const;
+  void print_object_code(std::ostream &os) const;
 
   void print_tables(std::ostream &) const;
 
