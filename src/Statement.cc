@@ -16,7 +16,9 @@ File: Statement.cc
 
 #include "Directives.hh"
 #include "Instructions.hh"
+#include "Literal.hh"
 #include "Statement.hh"
+#include "Symbol.hh"
 #include "helper.hh"
 
 Statement::Statement(const std::string &line, int32_t location)
@@ -175,7 +177,7 @@ void Statement::find_size() {
 }
 
 int32_t Statement::parse_immediate_value(
-    const std::map<std::string, int32_t> &symbol_table) {
+    const SymbolTab &symbol_table) {
 
   assert(m_addressing_mode.immediate);
   assert(!m_operand.empty());
@@ -185,7 +187,7 @@ int32_t Statement::parse_immediate_value(
   } else {
     auto it = symbol_table.find(m_operand);
     if (it != symbol_table.end()) {
-      return it->second;
+      return it->second->address();
     }
   }
 
@@ -223,8 +225,8 @@ void Statement::assemble_register_instruction() {
 }
 
 void Statement::assemble_memory_instruction(
-    const std::map<std::string, int32_t> &symbol_table,
-    const std::map<std::string, int32_t> &literal_table,
+    const SymbolTab &symbol_table,
+    const LiteralTab &literal_table,
     const std::string &base_register) {
 
   assert(m_type == StatementType::FORMAT3 || m_type == StatementType::FORMAT4);
@@ -269,9 +271,9 @@ void Statement::assemble_memory_instruction(
 
   if (m_addressing_mode.literal) {
     std::cerr << operand << "\n";
-    target_address = literal_table.at(operand);
+    target_address = literal_table.at(operand)->address();
   } else {
-    target_address = symbol_table.at(operand);
+    target_address = symbol_table.at(operand)->address();
   }
 
   std::cerr << "Target Address: " << std::hex << "0x" << target_address << "\n";
@@ -283,7 +285,7 @@ void Statement::assemble_memory_instruction(
   }
 
   if (!base_register.empty()) {
-    int32_t base = symbol_table.at(base_register);
+    int32_t base = symbol_table.at(base_register)->address();
     disp = target_address - base;
 
     if (disp >= 0 && disp <= 4095) {
@@ -318,8 +320,8 @@ output_bytes:
   }
 }
 
-void Statement::assemble(const std::map<std::string, int32_t> &symbol_table,
-                         const std::map<std::string, int32_t> &literal_table,
+void Statement::assemble(const SymbolTab &symbol_table,
+                         const LiteralTab &literal_table,
                          const std::string &base_register) {
   const auto& instructions = Instructions::the();
 

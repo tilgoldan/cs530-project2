@@ -56,8 +56,9 @@ public:
 
   void print_info() const;
 
-  void assemble(const std::map<std::string, int32_t> &,
-                const std::map<std::string, int32_t> &, const std::string &);
+  void assemble(const SymbolTab &, const LiteralTab &, const std::string &);
+
+  const std::vector<uint8_t>& bytes() const { return m_assembled_bytes;}
 
   void print_assembled(std::ostream &) const;
 
@@ -82,10 +83,9 @@ private:
   void find_addressing_mode();
   void parse_literal();
 
-  int32_t parse_immediate_value(const std::map<std::string, int32_t> &);
+  int32_t parse_immediate_value(const SymbolTab &);
 
   void assemble_register_instruction();
-  void assemble_memory_instruction(const std::map<std::string, int32_t> &,
-                                      const std::map<std::string, int32_t> &,
-                                      const std::string &);
+  void assemble_memory_instruction(const SymbolTab &, const LiteralTab &,
+                                   const std::string &);
 };

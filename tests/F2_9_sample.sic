@@ -27,7 +27,7 @@ MAXLEN    EQU     BUFEND-BUFFER
 RDREC     CLEAR   X
           CLEAR   A
           CLEAR   S
-        +LDT     #MAXLEN
+         +LDT     #MAXLEN
 RLOOP     TD      INPUT
           JEQ     RLOOP
           RD      INPUT

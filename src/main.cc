@@ -30,7 +30,8 @@ int main(int argc, char **argv) {
   }
 
   for (auto &section : sections) {
-    section->print();
+    section->print_listing(std::cout);
+    section->print_tables(std::cout);
   }
 
   return 0;

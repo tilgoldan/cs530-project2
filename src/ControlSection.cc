@@ -9,14 +9,20 @@ File: ControlSection.cc
 
 #include <cassert>
 #include <fstream>
+#include <iomanip>
 #include <ios>
 #include <iostream>
+#include <memory>
 #include <sstream>
 #include <string>
 
+
 #include "ControlSection.hh"
 #include "Directives.hh"
+#include "Symbol.hh"
+#include "Literal.hh"
 #include "Statement.hh"
+#include "Symbol.hh"
 
 ControlSection::ControlSection(std::string path)
     : m_path(path), m_location_counter(-1), m_start_address(-1),
@@ -33,42 +39,42 @@ ControlSection::ControlSection(std::string path)
   std::cerr << "Read " << m_raw.size() << " bytes from " << path << std::endl;
 }
 
-
 void ControlSection::define_pending_literals() {
-  for (const auto &literal : m_pending_literals) {
-    if (m_literals.find(literal) != m_literals.end()) {
+  for (auto &it : m_literals) {
+    if (it.second->address() != -1) {
       // Already defined
       continue;
     }
 
-    std::cerr << "Defining pending literal: " << literal << std::endl;
+    std::cerr << "Defining pending literal: " << it.first << std::endl;
 
     std::stringstream ss;
 
     ss << "*        =";
-    ss << literal;
+    ss << it.first;
 
     std::string line = ss.str();
 
     Statement stmt = Statement(line, m_location_counter);
     m_location_counter += stmt.size();
-    m_literals[stmt.opcode()] = stmt.location();
+    it.second->set_address(stmt.location());
+    it.second->set_bytes(stmt.bytes());
     m_statements.push_back(stmt);
   }
-
-  m_pending_literals.clear();
 }
 
-void ControlSection::define_label(const std::string name, int32_t address) {
-  m_labels[name] = address;
+void ControlSection::define_symbol(const std::string name, int32_t address,
+                                  Symbol type) {
+  m_labels[name] = std::make_shared<SymbolInfo>(address, type);
 }
 
-int32_t ControlSection::get_label(const std::string name) const {
+std::shared_ptr<SymbolInfo>
+ControlSection::get_symbol(const std::string name) const {
   if (m_labels.find(name) != m_labels.end()) {
     return m_labels.at(name);
   }
 
-  return -1;
+  return nullptr;
 }
 
 // Pass 1 (define symbols) :
@@ -124,27 +130,29 @@ void ControlSection::first_pass() {
     if (stmt.has_label() && stmt.type() != StatementType::LITERAL &&
         stmt.opcode() != "EQU") {
 
-      if (get_label(stmt.label()) != -1) {
+      if (get_symbol(stmt.label())) {
         std::cerr << "Duplicate label: " << stmt.label() << std::endl;
         assert(false && "Duplicate label");
       }
 
-      define_label(stmt.label(), m_location_counter);
+      define_symbol(stmt.label(), m_location_counter, Symbol::RELATIVE);
       std::cerr << "Label: " << stmt.label() << " @ " << m_location_counter
                 << std::endl;
 
     } else if (stmt.type() == StatementType::LITERAL) {
       // Save the value of the literal
-      std::cerr << "Literal: " << stmt.opcode() << " @ "
-                << stmt.location() << std::endl;
-      m_literals[stmt.opcode()] = stmt.location();
+      std::cerr << "Literal: " << stmt.opcode() << " @ " << stmt.location()
+                << std::endl;
+      auto &literal = m_literals[stmt.opcode()];
+      literal->set_address(stmt.location());
+      literal->set_bytes(stmt.bytes());
     }
 
     // Handle literals in the operand field
     if (stmt.operand_prefix() == '=' &&
         m_literals.find(stmt.operand()) == m_literals.end()) {
       // Save the literal for later
-      m_pending_literals.push_back(stmt.operand());
+      m_literals[stmt.operand()] = std::make_shared<LiteralInfo>();
     }
 
     m_statements.push_back(stmt);
@@ -193,25 +201,86 @@ void ControlSection::second_pass() {
   }
 }
 
-  void ControlSection::print() const {
-    std::cerr << "ControlSection::print()" << std::endl;
+void ControlSection::print_listing(std::ostream &os) const {
+  std::cerr << "ControlSection::print()" << std::endl;
 
-    std::cerr << "Path: " << m_path << std::endl;
-    std::cerr << "Name: " << m_name << std::endl;
-    std::cerr << std::hex;
-    std::cerr << "Start address: " << m_start_address << std::endl;
-    std::cerr << "End address: " << m_end_address << std::endl;
+  std::cerr << "Path: " << m_path << std::endl;
+  std::cerr << "Name: " << m_name << std::endl;
+  std::cerr << std::hex;
+  std::cerr << "Start address: " << m_start_address << std::endl;
+  std::cerr << "End address: " << m_end_address << std::endl;
 
-    std::cerr << "LABELS: " << std::endl;
-    for (const auto &label : m_labels) {
-      std::cerr << label.first << ":\t" << label.second << std::endl;
-    }
-
-    for (const auto &stmt : m_statements) {
-      stmt.print_assembled(std::cerr);
-    }
-
-    std::cerr << "ControlSection::print() done" << std::endl;
+  std::cerr << "LABELS: " << std::endl;
+  for (const auto &label : m_labels) {
+    std::cerr << label.first << ":\t" << label.second << std::endl;
   }
 
-  void ControlSection::print_symbol_table(std::ostream & os) const {}
+  for (const auto &stmt : m_statements) {
+    stmt.print_assembled(os);
+  }
+
+  std::cerr << "ControlSection::print() done" << std::endl;
+}
+
+void ControlSection::print_tables(std::ostream &os) const {
+
+  const auto print_csect = [](std::ostream &os, const std::string &name,
+                              int32_t start, int32_t length) {
+
+    os << std::setw(7) << std::setfill(' ') << std::left << name;
+    os << "         ";
+    os << std::setw(6) << std::setfill('0') << std::right << std::hex << start;
+    os << "  ";
+    os << std::setw(6) << std::setfill('0') << std::right << std::hex << length;
+    os << "\n";
+  };
+
+  const auto print_symbol = [](std::ostream & os, const std::string &name,
+                         const std::shared_ptr<SymbolInfo> &info) {
+
+    os << "        ";
+    os << std::setw(7) << std::setfill(' ') << std::left << name;
+    os << " ";
+    os << std::setw(6) << std::setfill('0') << std::right << std::hex
+       << info->address();
+    os << "          ";
+    os << (info->type() == Symbol::ABSOLUTE ? "A" : "R");
+    os << "\n";
+  };
+
+  os << "CSect   Symbol  Value   LENGTH  Flags:\n";
+  os << "--------------------------------------\n";
+
+  print_csect(os, m_name, m_start_address, length_in_bytes());
+  for (const auto &label : m_labels) {
+    print_symbol(os, label.first, label.second);
+  }
+
+  const auto print_literal = [](std::ostream &os, const std::string &name,
+                                 const std::shared_ptr<LiteralInfo> &info) {
+    os << std::setw(7) << std::setfill(' ') << std::left << name;
+    os << " ";
+
+    for (const auto &byte : info->bytes()) {
+      os << std::setw(2) << std::setfill('0') << std::right << std::hex
+         << (int)byte;
+    }
+
+    os << "\t";
+
+    os << std::setw(6) << std::setfill('0') << std::right << std::hex
+       << info->address();
+    os << " ";
+    os << std::setw(0) << std::dec << info->length();
+
+  };
+
+  os << "\n";
+  os << "Literal Table \n";
+  os << "Name    Operand   Address  Length:\n";
+  os << "--------------------------------\n";
+
+  for (const auto &literal : m_literals) {
+    print_literal(os, literal.first, literal.second);
+  }
+}
