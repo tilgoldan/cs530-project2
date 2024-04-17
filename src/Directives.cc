@@ -8,8 +8,8 @@ File: Directives.cc
 */
 
 #include "Directives.hh"
-#include "Symbol.hh"
 #include "Statement.hh"
+#include "Symbol.hh"
 #include "helper.hh"
 
 #include <cassert>
@@ -164,12 +164,24 @@ void org(Statement &statement, ControlSection &section) {
   section.set_location_counter(info.address());
 }
 
+void extref(Statement &statement, ControlSection &section) {
+  (void)statement;
+
+  auto symbol = section.define_symbol(statement.operand(), 0, Symbol::RELATIVE);
+
+  symbol->is_external(true);
+}
+
+void extdef(Statement &statement, ControlSection &section) {
+  (void)statement;
+  (void)section;
+  std::cerr << "TODO: extdef\n";
+}
+
 std::map<std::string, DirectiveHandler> &Directives::the() {
   static std::map<std::string, DirectiveHandler> s_directives = {
-      {"START", start}, {"END", end},   {"BASE", base},
-      {"RESW", resw},   {"RESB", resb}, {"BYTE", byte},
-      {"WORD", word},   {"ORG", org},   {"LTORG", ltorg},
-      {"EQU", equ},
-  };
+      {"START", start}, {"END", end},   {"BASE", base},     {"RESW", resw},
+      {"RESB", resb},   {"BYTE", byte}, {"WORD", word},     {"ORG", org},
+      {"LTORG", ltorg}, {"EQU", equ},   {"EXTREF", extref}, {"EXTDEF", extdef}};
   return s_directives;
 }

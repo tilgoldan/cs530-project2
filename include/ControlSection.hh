@@ -58,7 +58,7 @@ public:
     m_base_relative_label = label;
   }
 
-  void define_symbol(const std::string, int32_t, Symbol);
+  std::shared_ptr<SymbolInfo> define_symbol(const std::string, int32_t, Symbol);
   std::shared_ptr<SymbolInfo> get_symbol(const std::string) const;
   
   void process_pending_literals_next() { m_process_pending_literals = true; };

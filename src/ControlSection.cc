@@ -16,10 +16,8 @@ File: ControlSection.cc
 #include <sstream>
 #include <string>
 
-
 #include "ControlSection.hh"
 #include "Directives.hh"
-#include "Symbol.hh"
 #include "Literal.hh"
 #include "Statement.hh"
 #include "Symbol.hh"
@@ -34,7 +32,7 @@ ControlSection::ControlSection(std::string path)
     std::cerr << "Invalid path: " << path << std::endl;
     assert(false && "Invalid file extension");
   }
-  
+
   // Read the file at path into m_raw
   std::ifstream i_file(path);
 
@@ -69,9 +67,10 @@ void ControlSection::define_pending_literals() {
   }
 }
 
-void ControlSection::define_symbol(const std::string name, int32_t address,
-                                  Symbol type) {
-  m_labels[name] = std::make_shared<SymbolInfo>(address, type);
+std::shared_ptr<SymbolInfo>
+ControlSection::define_symbol(const std::string name, int32_t address,
+                              Symbol type) {
+  return m_labels[name] = std::make_shared<SymbolInfo>(address, type);
 }
 
 std::shared_ptr<SymbolInfo>
@@ -232,7 +231,6 @@ void ControlSection::print_tables(std::ostream &os) const {
 
   const auto print_csect = [](std::ostream &os, const std::string &name,
                               int32_t start, int32_t length) {
-
     os << std::setw(7) << std::setfill(' ') << std::left << name;
     os << "         ";
     os << std::setw(6) << std::setfill('0') << std::right << std::hex << start;
@@ -241,14 +239,18 @@ void ControlSection::print_tables(std::ostream &os) const {
     os << "\n";
   };
 
-  const auto print_symbol = [](std::ostream & os, const std::string &name,
-                         const std::shared_ptr<SymbolInfo> &info) {
-
+  const auto print_symbol = [](std::ostream &os, const std::string &name,
+                               const std::shared_ptr<SymbolInfo> &info) {
     os << "        ";
     os << std::setw(7) << std::setfill(' ') << std::left << name;
     os << " ";
-    os << std::setw(6) << std::setfill('0') << std::right << std::hex
-       << info->address();
+    if (info->external()) {
+      os << std::setw(6) << std::setfill(' ') << std::left << std::hex
+         << "EXT.";
+    } else {
+      os << std::setw(6) << std::setfill('0') << std::right << std::hex
+         << info->address();
+    }
     os << "          ";
     os << (info->type() == Symbol::ABSOLUTE ? "A" : "R");
     os << "\n";
@@ -267,7 +269,7 @@ void ControlSection::print_tables(std::ostream &os) const {
   }
 
   const auto print_literal = [](std::ostream &os, const std::string &name,
-                                 const std::shared_ptr<LiteralInfo> &info) {
+                                const std::shared_ptr<LiteralInfo> &info) {
     os << std::setw(7) << std::setfill(' ') << std::left << name;
     os << " ";
 
