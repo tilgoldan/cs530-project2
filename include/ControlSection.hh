@@ -9,17 +9,18 @@ File: ControlSection.hh
 
 #pragma once
 
-
 #include <map>
 #include <memory>
 #include <ostream>
 #include <string>
 #include <vector>
 
-#include "Symbol.hh"
 #include "Literal.hh"
-#include "Statement.hh"
+#include "Symbol.hh"
 
+class ControlSection;
+
+#include "Statement.hh"
 
 enum struct Pass {
   NONE,
@@ -58,9 +59,16 @@ public:
     m_base_relative_label = label;
   }
 
-  std::shared_ptr<SymbolInfo> define_symbol(const std::string, int32_t, SymbolType);
+  std::shared_ptr<SymbolInfo> define_symbol(const std::string, int32_t,
+                                            SymbolType);
   std::shared_ptr<SymbolInfo> get_symbol(const std::string) const;
+
+  std::shared_ptr<LiteralInfo> define_literal(const std::string, int32_t);
   
+  std::shared_ptr<LiteralInfo> get_literal(const std::string) const;
+
+  SymbolInfo parse_value(const std::string&) const;
+
   void process_pending_literals_next() { m_process_pending_literals = true; };
 
   Pass current_pass() const { return m_current_pass; }
@@ -75,7 +83,7 @@ private:
   std::string m_name;
 
   std::vector<Statement> m_statements;
-  
+
   SymbolTab m_labels;
 
   LiteralTab m_literals;

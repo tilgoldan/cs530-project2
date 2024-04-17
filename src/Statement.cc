@@ -233,12 +233,10 @@ void Statement::bytes_from_direct_value(int32_t value) {
     shift -= 8;
   }
 
-  assert(m_assembled_bytes.size() == (size_t) m_size);
+  assert(m_assembled_bytes.size() == (size_t)m_size);
 }
 
-void Statement::assemble_memory_instruction(const SymbolTab &symbol_table,
-                                            const LiteralTab &literal_table,
-                                            const std::string &base_register) {
+void Statement::assemble_memory_instruction(const ControlSection &section) {
 
   assert(m_type == StatementType::FORMAT3 || m_type == StatementType::FORMAT4);
 
@@ -246,11 +244,22 @@ void Statement::assemble_memory_instruction(const SymbolTab &symbol_table,
   auto &instr = instructions.at(m_mnemonic);
   auto opcode = instr.opcode;
 
+  std::cerr << "Assemble Memory Instruction: " << m_mnemonic << "\n";
+  std::cerr << " -Location: " << m_location << "\n";
+
+  // Addressing mode
+  std::cerr << " -Addressing Mode: ";
+  std::cerr << "    Indirect: " << m_addressing_mode.indirect;
+  std::cerr << "    Immediate: " << m_addressing_mode.immediate;
+  std::cerr << "    Indexed: " << m_addressing_mode.indexed;
+  std::cerr << "    Extended: " << m_addressing_mode.extended;
+  std::cerr << "    Literal: " << m_addressing_mode.literal << "\n";
+
   std::string operand = m_operand;
 
   // points to the next instruction
   int32_t ip = m_location + m_size;
-  int32_t target_address = 0;
+  SymbolInfo target(0, SymbolType::RELATIVE);
   int32_t disp;
   int32_t flag_nibble = 0;
   int32_t data = 0;
@@ -259,13 +268,6 @@ void Statement::assemble_memory_instruction(const SymbolTab &symbol_table,
     opcode |= 0x02;
   } else if (m_addressing_mode.immediate) {
     opcode |= 0x01;
-    if (m_addressing_mode.extended) {
-      flag_nibble |= 0x01;
-    }
-
-    data = parse_immediate_value(symbol_table);
-    // Immediate value is already in the operand
-    goto output_bytes;
   } else {
     opcode |= 0x03;
   }
@@ -282,22 +284,44 @@ void Statement::assemble_memory_instruction(const SymbolTab &symbol_table,
 
   if (m_addressing_mode.literal) {
     std::cerr << operand << "\n";
-    target_address = literal_table.at(operand)->address();
+    target.set_value(section.get_literal(operand)->address());
   } else {
-    target_address = symbol_table.at(operand)->value();
+    auto symbol = section.parse_value(operand);
+    target.set_value(symbol.value());
+    target.set_type(symbol.type());
+
+    if (symbol.type() == SymbolType::RELATIVE) {
+      std::cerr << "Relative Symbol\n";
+    } else if (symbol.type() == SymbolType::ABSOLUTE) {
+      std::cerr << "Absolute Symbol\n";
+    }
   }
 
-  std::cerr << "Target Address: " << std::hex << "0x" << target_address << "\n";
+  std::cerr << "Target Address: " << std::hex << "0x" << target.value() << "\n";
 
   if (m_addressing_mode.extended) {
     flag_nibble |= 0x01;
-    data = target_address;
+    data = target.value();
     goto output_bytes;
   }
 
-  if (!base_register.empty()) {
-    int32_t base = symbol_table.at(base_register)->value();
-    disp = target_address - base;
+  if (target.type() == SymbolType::ABSOLUTE) {
+    data = target.value();
+    goto output_bytes;
+  }
+
+  disp = data = target.value() - ip;
+
+  if (disp >= -2048 && disp <= 2047) {
+    std::cerr << "PC Relative\n";
+    flag_nibble |= 0x02;
+    data = disp;
+    goto output_bytes;
+  }
+
+  if (!section.base_relative_label().empty()) {
+    int32_t base = section.get_symbol(section.base_relative_label())->value();
+    disp = target.value() - base;
 
     if (disp >= 0 && disp <= 4095) {
       std::cerr << "Base Relative\n";
@@ -307,15 +331,7 @@ void Statement::assemble_memory_instruction(const SymbolTab &symbol_table,
     }
   }
 
-  std::cerr << "PC Relative\n";
-  disp = target_address - ip;
-
-  if (disp >= -2048 && disp <= 2047) {
-    flag_nibble |= 0x02;
-    data = disp;
-  } else {
-    NOT_REACHED("Not addressable address");
-  }
+  NOT_REACHED("Not addressable address");
 
 output_bytes:
 
@@ -329,11 +345,15 @@ output_bytes:
     m_assembled_bytes.push_back(flag_nibble << 4 | ((data >> (8)) & 0xF));
     m_assembled_bytes.push_back((data)&0xFF);
   }
+
+  for (auto byte : m_assembled_bytes) {
+    std::cerr << std::hex << std::uppercase << static_cast<int>(byte) << " ";
+  }
+
+  std::cerr << "\n++++assembled\n";
 }
 
-void Statement::assemble(const SymbolTab &symbol_table,
-                         const LiteralTab &literal_table,
-                         const std::string &base_register) {
+void Statement::assemble(const ControlSection &section) {
   const auto &instructions = Instructions::the();
 
   switch (m_type) {
@@ -356,7 +376,7 @@ void Statement::assemble(const SymbolTab &symbol_table,
   }
   case StatementType::FORMAT3:
   case StatementType::FORMAT4: {
-    assemble_memory_instruction(symbol_table, literal_table, base_register);
+    assemble_memory_instruction(section);
     break;
   }
   default:

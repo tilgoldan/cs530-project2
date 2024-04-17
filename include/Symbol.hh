@@ -22,7 +22,10 @@ public:
   SymbolInfo(int32_t value, SymbolType type) : m_value(value), m_type(type) {}
 
   int32_t value() const { return m_value; }
+  void set_value(int32_t value) { m_value = value; }
+
   SymbolType type() const { return m_type; }
+  void set_type(SymbolType type) { m_type = type; }
 
 private:
   int32_t m_value;

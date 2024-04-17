@@ -16,90 +16,6 @@ File: Directives.cc
 #include <iostream>
 #include <map>
 
-SymbolInfo parse_value(std::string s, ControlSection &section) {
-  // value can be: constant, other symbol, or an expression
-  // NOT_IMPLEMENTED("parse_value");
-
-  enum Op {
-    ADD,
-    SUB,
-  };
-
-  auto vec = splitStringAlongDelimiters(s, "+-");
-
-  bool negative = false;
-  bool next_token_is_op = false;
-  Op current_op = ADD;
-
-  SymbolType final_type = SymbolType::ABSOLUTE;
-
-  int32_t value = 0;
-
-  for (size_t i = 0; i < vec.size(); i++) {
-    if (i == 0 && vec[i] == "-") {
-      negative = true;
-      continue;
-    }
-
-    if (next_token_is_op) {
-      switch (vec[i][0]) {
-      case '+':
-        current_op = ADD;
-        break;
-      case '-':
-        current_op = SUB;
-        break;
-      default:
-        NOT_REACHED("Invalid operator");
-      }
-    } else {
-      int32_t acu = 0;
-      SymbolType type = SymbolType::ABSOLUTE;
-
-      if (is_number(vec[i])) {
-        acu = std::stoi(vec[i], nullptr, 10);
-      } else {
-        auto symbol = section.get_symbol(vec[i]);
-        if (!symbol) {
-          NOT_REACHED("Symbol not found");
-        }
-
-        acu = symbol->value();
-        type = symbol->type();
-
-        if (type == SymbolType::EXTERNAL) {
-          // Not sure if this is correct
-          type = SymbolType::RELATIVE;
-        }
-      }
-
-      switch (current_op) {
-      case ADD:
-        value += acu;
-
-        if (type == SymbolType::RELATIVE) {
-          final_type = SymbolType::RELATIVE;
-        }
-        break;
-      case SUB:
-        value -= acu;
-
-        if (type == SymbolType::RELATIVE) {
-          final_type = SymbolType::ABSOLUTE;
-        }
-        break;
-      }
-    }
-    next_token_is_op = !next_token_is_op;
-  }
-
-  if (negative) {
-    value = -value;
-  }
-
-  return SymbolInfo(value, final_type);
-}
-
 void start(Statement &statement, ControlSection &section) {
 
   if (section.current_pass() != Pass::FIRST) {
@@ -173,7 +89,7 @@ void word(Statement &statement, ControlSection &section) {
     // Format of "X'...'" or "C'...'""
     statement.parse_literal_data(statement.operand());
   } else {
-    auto value = parse_value(op, section);
+    auto value = section.parse_value(op);
     statement.bytes_from_direct_value(value.value());
   }
 
@@ -202,7 +118,7 @@ void byte(Statement &statement, ControlSection &section) {
     // Format of "X'...'" or "C'...'""
     statement.parse_literal_data(statement.operand());
   } else {
-    auto value = parse_value(op, section);
+    auto value = section.parse_value(op);
     statement.bytes_from_direct_value(value.value());
   }
 
@@ -231,7 +147,7 @@ void equ(Statement &statement, ControlSection &section) {
     section.define_symbol(statement.label(), section.location_counter(),
                           SymbolType::RELATIVE);
   } else {
-    auto info = parse_value(statement.operand(), section);
+    auto info = section.parse_value(statement.operand());
     section.define_symbol(statement.label(), info.value(), info.type());
   }
 }
@@ -243,7 +159,7 @@ void org(Statement &statement, ControlSection &section) {
     return;
   }
 
-  auto info = parse_value(statement.operand(), section);
+  auto info = section.parse_value(statement.operand());
   section.set_location_counter(info.value());
 }
 

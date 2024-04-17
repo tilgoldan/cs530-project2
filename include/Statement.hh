@@ -13,6 +13,10 @@ File: Statement.hh
 #include <string>
 #include <vector>
 
+class Statement;
+
+#include "ControlSection.hh"
+
 enum class StatementType {
   DIRECTIVE = 0,
   LITERAL,
@@ -56,7 +60,7 @@ public:
 
   void print_info() const;
 
-  void assemble(const SymbolTab &, const LiteralTab &, const std::string &);
+  void assemble(const ControlSection &);
 
   const std::vector<uint8_t> &bytes() const { return m_assembled_bytes; }
   void bytes_from_direct_value(int32_t value);
@@ -88,6 +92,5 @@ private:
   int32_t parse_immediate_value(const SymbolTab &);
 
   void assemble_register_instruction();
-  void assemble_memory_instruction(const SymbolTab &, const LiteralTab &,
-                                   const std::string &);
+  void assemble_memory_instruction(const ControlSection &);
 };

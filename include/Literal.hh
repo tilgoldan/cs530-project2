@@ -16,8 +16,8 @@ class LiteralInfo {
 public:
   LiteralInfo()
       : m_address(-1) {}
-  LiteralInfo(int32_t address, const std::vector<uint8_t> bytes)
-      : m_address(address), m_bytes(bytes) {}
+  LiteralInfo(int32_t address)
+      : m_address(address) {}
 
   int32_t address() const { return m_address; }
   void set_address(int32_t address) { m_address = address; }

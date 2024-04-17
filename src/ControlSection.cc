@@ -21,6 +21,7 @@ File: ControlSection.cc
 #include "Literal.hh"
 #include "Statement.hh"
 #include "Symbol.hh"
+#include "helper.hh"
 
 ControlSection::ControlSection(std::string path)
     : m_path(path), m_location_counter(-1), m_start_address(-1),
@@ -80,6 +81,101 @@ ControlSection::get_symbol(const std::string name) const {
   }
 
   return nullptr;
+}
+
+std::shared_ptr<LiteralInfo>
+ControlSection::define_literal(const std::string name, int32_t address) {
+  return m_literals[name] = std::make_shared<LiteralInfo>(address);
+}
+
+std::shared_ptr<LiteralInfo>
+ControlSection::get_literal(const std::string name) const {
+  if (m_literals.find(name) != m_literals.end()) {
+    return m_literals.at(name);
+  }
+
+  return nullptr;
+}
+
+SymbolInfo ControlSection::parse_value(const std::string &s) const {
+  enum Op {
+    ADD,
+    SUB,
+  };
+
+  auto vec = splitStringAlongDelimiters(s, "+-");
+
+  bool negative = false;
+  bool next_token_is_op = false;
+  Op current_op = ADD;
+
+  SymbolType final_type = SymbolType::ABSOLUTE;
+
+  int32_t value = 0;
+
+  for (size_t i = 0; i < vec.size(); i++) {
+    if (i == 0 && vec[i] == "-") {
+      negative = true;
+      continue;
+    }
+
+    if (next_token_is_op) {
+      switch (vec[i][0]) {
+      case '+':
+        current_op = ADD;
+        break;
+      case '-':
+        current_op = SUB;
+        break;
+      default:
+        NOT_REACHED("Invalid operator");
+      }
+    } else {
+      int32_t acu = 0;
+      SymbolType type = SymbolType::ABSOLUTE;
+
+      if (is_number(vec[i])) {
+        acu = std::stoi(vec[i], nullptr, 10);
+      } else {
+        auto symbol = get_symbol(vec[i]);
+        if (!symbol) {
+          NOT_REACHED("Symbol not found");
+        }
+
+        acu = symbol->value();
+        type = symbol->type();
+
+        if (type == SymbolType::EXTERNAL) {
+          // Not sure if this is correct
+          type = SymbolType::RELATIVE;
+        }
+      }
+
+      switch (current_op) {
+      case ADD:
+        value += acu;
+
+        if (type == SymbolType::RELATIVE) {
+          final_type = SymbolType::RELATIVE;
+        }
+        break;
+      case SUB:
+        value -= acu;
+
+        if (type == SymbolType::RELATIVE) {
+          final_type = SymbolType::ABSOLUTE;
+        }
+        break;
+      }
+    }
+    next_token_is_op = !next_token_is_op;
+  }
+
+  if (negative) {
+    value = -value;
+  }
+
+  return SymbolInfo(value, final_type);
 }
 
 // Pass 1 (define symbols) :
@@ -201,7 +297,7 @@ void ControlSection::second_pass() {
     } else {
       // Normal instruction
       // Assemble the statement
-      stmt.assemble(m_labels, m_literals, m_base_relative_label);
+      stmt.assemble(*this);
     }
   }
 }
@@ -214,11 +310,6 @@ void ControlSection::print_listing(std::ostream &os) const {
   std::cerr << std::hex;
   std::cerr << "Start address: " << m_start_address << std::endl;
   std::cerr << "End address: " << m_end_address << std::endl;
-
-  std::cerr << "LABELS: " << std::endl;
-  for (const auto &label : m_labels) {
-    std::cerr << label.first << ":\t" << label.second << std::endl;
-  }
 
   for (const auto &stmt : m_statements) {
     stmt.print_assembled(os);
@@ -245,8 +336,7 @@ void ControlSection::print_tables(std::ostream &os) const {
     os << std::setw(7) << std::setfill(' ') << std::left << name;
     os << " ";
     if (info->type() == SymbolType::EXTERNAL) {
-      os << std::setw(6) << std::setfill(' ') << std::left << std::hex
-         << "";
+      os << std::setw(6) << std::setfill(' ') << std::left << std::hex << "";
     } else {
       os << std::setw(6) << std::setfill('0') << std::right << std::hex
          << info->value();
