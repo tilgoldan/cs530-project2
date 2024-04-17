@@ -259,6 +259,10 @@ void ControlSection::print_tables(std::ostream &os) const {
 
   print_csect(os, m_name, m_start_address, length_in_bytes());
   for (const auto &label : m_labels) {
+    if (label.first == m_name) {
+      continue;
+    }
+
     print_symbol(os, label.first, label.second);
   }
 

@@ -405,7 +405,7 @@ void Statement::print_assembled(std::ostream &out) const {
   // Mnemonic
   out << m_mnemonic_prefix;
 
-  int width = 8;
+  int width = 7;
   out << std::setw(width) << std::setfill(' ') << std::left << m_mnemonic;
 
   out << " ";
@@ -413,7 +413,7 @@ void Statement::print_assembled(std::ostream &out) const {
   // Operand
   out << m_operand_prefix;
 
-  width = 26;
+  width = 25;
   out << std::setw(width) << std::setfill(' ') << std::left << m_operand;
 
   for (auto byte : m_assembled_bytes) {
