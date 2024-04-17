@@ -16,21 +16,88 @@ File: Directives.cc
 #include <iostream>
 #include <map>
 
-SymbolInfo parse_value(std::string s) {
+SymbolInfo parse_value(std::string s, ControlSection &section) {
   // value can be: constant, other symbol, or an expression
   // NOT_IMPLEMENTED("parse_value");
 
-  // Expressions can be classified as absolute
-  // expressions or relative expressions MAXLEN EQU BUFEND - BUFFER
-  // – BUFEND and BUFFER both are relative terms,
-  //       representing addresses within the program
-  // – However the expression BUFEND - BUFFER represents an absolute value
-  // • When relative terms are paired with opposite signs,
-  //       the dependency on the program starting addres
+  enum Op {
+    ADD,
+    SUB,
+  };
 
-  std::cerr << "TODO: parse_value\n";
+  auto vec = splitStringAlongDelimiters(s, "+-");
 
-  return SymbolInfo(0xdeadc0de, Symbol::ABSOLUTE);
+  bool negative = false;
+  bool next_token_is_op = false;
+  Op current_op = ADD;
+
+  SymbolType final_type = SymbolType::ABSOLUTE;
+
+  int32_t value = 0;
+
+  for (int i = 0; i < vec.size(); i++) {
+    if (i == 0 && vec[i] == "-") {
+      negative = true;
+      continue;
+    }
+
+    if (next_token_is_op) {
+      switch (vec[i][0]) {
+      case '+':
+        current_op = ADD;
+        break;
+      case '-':
+        current_op = SUB;
+        break;
+      default:
+        NOT_REACHED("Invalid operator");
+      }
+    } else {
+      int32_t acu = 0;
+      SymbolType type = SymbolType::ABSOLUTE;
+
+      if (is_number(vec[i])) {
+        acu = std::stoi(vec[i], nullptr, 10);
+      } else {
+        auto symbol = section.get_symbol(vec[i]);
+        if (!symbol) {
+          NOT_REACHED("Symbol not found");
+        }
+
+        acu = symbol->value();
+        type = symbol->type();
+
+        if (type == SymbolType::EXTERNAL) {
+          // Not sure if this is correct
+          type = SymbolType::RELATIVE;
+        }
+      }
+
+      switch (current_op) {
+      case ADD:
+        value += acu;
+
+        if (type == SymbolType::RELATIVE) {
+          final_type = SymbolType::RELATIVE;
+        }
+        break;
+      case SUB:
+        value -= acu;
+
+        if (type == SymbolType::RELATIVE) {
+          final_type = SymbolType::ABSOLUTE;
+        }
+        break;
+      }
+    }
+    next_token_is_op = !next_token_is_op;
+  }
+
+  if (negative) {
+    value = -value;
+  }
+
+  return SymbolInfo(value, SymbolType::ABSOLUTE);
 }
 
 void start(Statement &statement, ControlSection &section) {
@@ -146,10 +213,10 @@ void equ(Statement &statement, ControlSection &section) {
   if (statement.operand() == "*") {
     // Set the label to the current location counter
     section.define_symbol(statement.label(), section.location_counter(),
-                          Symbol::RELATIVE);
+                          SymbolType::RELATIVE);
   } else {
-    auto info = parse_value(statement.operand());
-    section.define_symbol(statement.label(), info.address(), info.type());
+    auto info = parse_value(statement.operand(), section);
+    section.define_symbol(statement.label(), info.value(), info.type());
   }
 }
 
@@ -160,16 +227,16 @@ void org(Statement &statement, ControlSection &section) {
     return;
   }
 
-  auto info = parse_value(statement.operand());
-  section.set_location_counter(info.address());
+  auto info = parse_value(statement.operand(), section);
+  section.set_location_counter(info.value());
 }
 
 void extref(Statement &statement, ControlSection &section) {
   (void)statement;
 
-  auto symbol = section.define_symbol(statement.operand(), 0, Symbol::RELATIVE);
-
-  symbol->is_external(true);
+  for (const auto &symbol : splitString(statement.operand(), ',')) {
+    section.define_symbol(symbol, 0, SymbolType::EXTERNAL);
+  }
 }
 
 void extdef(Statement &statement, ControlSection &section) {

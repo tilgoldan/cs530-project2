@@ -11,26 +11,22 @@ File: Symbol.hh
 #include <map>
 #include <string>
 
-enum class Symbol {
+enum class SymbolType {
   RELATIVE,
   ABSOLUTE,
+  EXTERNAL,
 };
 
 class SymbolInfo {
 public:
-  SymbolInfo(int32_t address, Symbol type)
-      : m_address(address), m_type(type) {}
+  SymbolInfo(int32_t value, SymbolType type) : m_value(value), m_type(type) {}
 
-  int32_t address() const { return m_address; }
-  Symbol type() const { return m_type; }
-
-  bool external() const { return m_external; }
-  void is_external(bool external) { m_external = external; }
+  int32_t value() const { return m_value; }
+  SymbolType type() const { return m_type; }
 
 private:
-  int32_t m_address;
-  Symbol m_type;
-  bool m_external;
+  int32_t m_value;
+  SymbolType m_type;
 };
 
 using SymbolTab = std::map<std::string, std::shared_ptr<SymbolInfo>>;

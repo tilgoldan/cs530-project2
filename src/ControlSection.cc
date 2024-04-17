@@ -69,7 +69,7 @@ void ControlSection::define_pending_literals() {
 
 std::shared_ptr<SymbolInfo>
 ControlSection::define_symbol(const std::string name, int32_t address,
-                              Symbol type) {
+                              SymbolType type) {
   return m_labels[name] = std::make_shared<SymbolInfo>(address, type);
 }
 
@@ -140,7 +140,7 @@ void ControlSection::first_pass() {
         assert(false && "Duplicate label");
       }
 
-      define_symbol(stmt.label(), m_location_counter, Symbol::RELATIVE);
+      define_symbol(stmt.label(), m_location_counter, SymbolType::RELATIVE);
       std::cerr << "Label: " << stmt.label() << " @ " << m_location_counter
                 << std::endl;
 
@@ -244,15 +244,25 @@ void ControlSection::print_tables(std::ostream &os) const {
     os << "        ";
     os << std::setw(7) << std::setfill(' ') << std::left << name;
     os << " ";
-    if (info->external()) {
+    if (info->type() == SymbolType::EXTERNAL) {
       os << std::setw(6) << std::setfill(' ') << std::left << std::hex
-         << "EXT.";
+         << "";
     } else {
       os << std::setw(6) << std::setfill('0') << std::right << std::hex
-         << info->address();
+         << info->value();
     }
     os << "          ";
-    os << (info->type() == Symbol::ABSOLUTE ? "A" : "R");
+    switch (info->type()) {
+    case SymbolType::ABSOLUTE:
+      os << "A";
+      break;
+    case SymbolType::RELATIVE:
+      os << "R";
+      break;
+    case SymbolType::EXTERNAL:
+      os << "E";
+      break;
+    }
     os << "\n";
   };
 

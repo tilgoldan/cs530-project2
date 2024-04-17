@@ -189,7 +189,7 @@ int32_t Statement::parse_immediate_value(const SymbolTab &symbol_table) {
   } else {
     auto it = symbol_table.find(m_operand);
     if (it != symbol_table.end()) {
-      return it->second->address();
+      return it->second->value();
     }
   }
 
@@ -198,28 +198,26 @@ int32_t Statement::parse_immediate_value(const SymbolTab &symbol_table) {
 
 void Statement::assemble_register_instruction() {
   assert(m_type == StatementType::FORMAT2);
-  assert(m_operand.size() >= 1);
-
-  const auto &instructions = Instructions::the();
-  auto &instr = instructions.at(m_mnemonic);
-  auto opcode = instr.opcode;
+  assert(!m_operand.empty());
 
   const auto &regs = Instructions::regs();
-  auto op = m_operand;
+  const auto &instructions = Instructions::the();
+
+  auto &instr = instructions.at(m_mnemonic);
+  auto opcode = instr.opcode;
 
   int32_t r1 = 0;
   int32_t r2 = 0;
 
-  if (op.find(",") != std::string::npos) {
-    auto pos = op.find(",");
+  auto s_regs = splitString(m_operand, ',');
 
-    auto r1_str = op.substr(0, pos);
-    auto r2_str = op.substr(pos + 1);
-
-    r1 = regs.at(r1_str);
-    r2 = regs.at(r2_str);
+  if (s_regs.size() == 1) {
+    r1 = regs.at(s_regs[0]);
+  } else if (s_regs.size() == 2) {
+    r1 = regs.at(s_regs[0]);
+    r2 = regs.at(s_regs[1]);
   } else {
-    r1 = regs.at(op);
+    NOT_REACHED("Invalid register instruction");
   }
 
   m_assembled_bytes.push_back(opcode);
@@ -274,7 +272,7 @@ void Statement::assemble_memory_instruction(const SymbolTab &symbol_table,
     std::cerr << operand << "\n";
     target_address = literal_table.at(operand)->address();
   } else {
-    target_address = symbol_table.at(operand)->address();
+    target_address = symbol_table.at(operand)->value();
   }
 
   std::cerr << "Target Address: " << std::hex << "0x" << target_address << "\n";
@@ -286,7 +284,7 @@ void Statement::assemble_memory_instruction(const SymbolTab &symbol_table,
   }
 
   if (!base_register.empty()) {
-    int32_t base = symbol_table.at(base_register)->address();
+    int32_t base = symbol_table.at(base_register)->value();
     disp = target_address - base;
 
     if (disp >= 0 && disp <= 4095) {
