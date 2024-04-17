@@ -64,10 +64,10 @@ public:
   std::shared_ptr<SymbolInfo> get_symbol(const std::string) const;
 
   std::shared_ptr<LiteralInfo> define_literal(const std::string, int32_t);
-  
+  std::shared_ptr<LiteralInfo> define_pending_literal(const std::string);
   std::shared_ptr<LiteralInfo> get_literal(const std::string) const;
 
-  SymbolInfo parse_value(const std::string&) const;
+  SymbolInfo parse_value(const std::string &) const;
 
   void process_pending_literals_next() { m_process_pending_literals = true; };
 
@@ -77,6 +77,9 @@ public:
 
   void print_tables(std::ostream &) const;
 
+  void assembler_error(const std::string &) const;
+  void assembler_error(const std::string &, const Statement &) const;
+
 private:
   const std::string m_path;
   std::string m_raw;
@@ -84,7 +87,7 @@ private:
 
   std::vector<Statement> m_statements;
 
-  SymbolTab m_labels;
+  SymbolTab m_symbols;
 
   LiteralTab m_literals;
   bool m_process_pending_literals;
@@ -98,4 +101,4 @@ private:
   std::string m_base_relative_label;
 
   void define_pending_literals();
-};
+  };

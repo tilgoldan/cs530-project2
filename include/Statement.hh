@@ -40,11 +40,15 @@ enum class LiteralFormat { CHAR, HEX, INVALID };
 
 class Statement {
 public:
-  Statement(const std::string &line, int32_t location);
+  Statement(const std::string &line, int32_t location, int32_t);
   ~Statement() = default;
+
+  int32_t line_number() const { return m_line_number; }
 
   int32_t location() const { return m_location; }
   void set_location(int32_t location) { m_location = location; }
+
+  const std::string &raw() const { return m_raw; }
 
   StatementType type() const { return m_type; }
   const std::string &label() const { return m_label; }
@@ -69,6 +73,7 @@ public:
   void parse_literal_data(std::string);
 
 private:
+  const std::size_t m_line_number;
   int32_t m_location;
   int32_t m_size;
   StatementType m_type;

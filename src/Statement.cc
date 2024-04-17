@@ -8,6 +8,7 @@ File: Statement.cc
 */
 
 #include <cassert>
+#include <cstddef>
 #include <iomanip>
 #include <ios>
 #include <iostream>
@@ -22,8 +23,8 @@ File: Statement.cc
 #include "Symbol.hh"
 #include "helper.hh"
 
-Statement::Statement(const std::string &line, int32_t location)
-    : m_location(location), m_size(0) {
+Statement::Statement(const std::string &line, int32_t location, int32_t line_number)
+    : m_line_number(line_number), m_location(location), m_size(0) {
   m_type = StatementType::INVALID;
   m_raw = line;
   m_label = line.substr(0, 6);
@@ -62,7 +63,9 @@ Statement::Statement(const std::string &line, int32_t location)
 
   find_size();
 
-  assert(!m_mnemonic.empty());
+  if (m_mnemonic.empty()) {
+    m_type = StatementType::INVALID;
+  }
 }
 
 StatementType Statement::find_type() {
@@ -97,7 +100,7 @@ StatementType Statement::find_type() {
         return StatementType::FORMAT3;
       }
     default:
-      NOT_REACHED();
+      return StatementType::INVALID;
     }
   }
 
@@ -244,17 +247,6 @@ void Statement::assemble_memory_instruction(const ControlSection &section) {
   auto &instr = instructions.at(m_mnemonic);
   auto opcode = instr.opcode;
 
-  std::cerr << "Assemble Memory Instruction: " << m_mnemonic << "\n";
-  std::cerr << " -Location: " << m_location << "\n";
-
-  // Addressing mode
-  std::cerr << " -Addressing Mode: ";
-  std::cerr << "    Indirect: " << m_addressing_mode.indirect;
-  std::cerr << "    Immediate: " << m_addressing_mode.immediate;
-  std::cerr << "    Indexed: " << m_addressing_mode.indexed;
-  std::cerr << "    Extended: " << m_addressing_mode.extended;
-  std::cerr << "    Literal: " << m_addressing_mode.literal << "\n";
-
   std::string operand = m_operand;
 
   // points to the next instruction
@@ -264,6 +256,7 @@ void Statement::assemble_memory_instruction(const ControlSection &section) {
   int32_t flag_nibble = 0;
   int32_t data = 0;
 
+  // Set the opcode XE flag bits
   if (m_addressing_mode.indirect) {
     opcode |= 0x02;
   } else if (m_addressing_mode.immediate) {
@@ -279,25 +272,18 @@ void Statement::assemble_memory_instruction(const ControlSection &section) {
   }
 
   if (operand.empty()) {
+    data = 0;
     goto output_bytes;
   }
 
+  // Find the target address
   if (m_addressing_mode.literal) {
-    std::cerr << operand << "\n";
     target.set_value(section.get_literal(operand)->address());
   } else {
-    auto symbol = section.parse_value(operand);
-    target.set_value(symbol.value());
-    target.set_type(symbol.type());
-
-    if (symbol.type() == SymbolType::RELATIVE) {
-      std::cerr << "Relative Symbol\n";
-    } else if (symbol.type() == SymbolType::ABSOLUTE) {
-      std::cerr << "Absolute Symbol\n";
-    }
+    target = section.parse_value(operand);
   }
 
-  std::cerr << "Target Address: " << std::hex << "0x" << target.value() << "\n";
+  // std::cerr << "Target Address: " << std::hex << "0x" << target.value() << "\n";
 
   if (m_addressing_mode.extended) {
     flag_nibble |= 0x01;
@@ -310,28 +296,30 @@ void Statement::assemble_memory_instruction(const ControlSection &section) {
     goto output_bytes;
   }
 
-  disp = data = target.value() - ip;
+  // Try displacement for PC relative
+  disp = target.value() - ip;
 
   if (disp >= -2048 && disp <= 2047) {
-    std::cerr << "PC Relative\n";
+    // std::cerr << "PC Relative\n";
     flag_nibble |= 0x02;
     data = disp;
     goto output_bytes;
   }
 
+  // Try displacement for Base relative
   if (!section.base_relative_label().empty()) {
     int32_t base = section.get_symbol(section.base_relative_label())->value();
     disp = target.value() - base;
 
     if (disp >= 0 && disp <= 4095) {
-      std::cerr << "Base Relative\n";
+      // std::cerr << "Base Relative\n";
       flag_nibble |= 0x04;
       data = disp;
       goto output_bytes;
     }
   }
 
-  NOT_REACHED("Not addressable address");
+  section.assembler_error("No way to address this address", *this);
 
 output_bytes:
 
@@ -345,12 +333,6 @@ output_bytes:
     m_assembled_bytes.push_back(flag_nibble << 4 | ((data >> (8)) & 0xF));
     m_assembled_bytes.push_back((data)&0xFF);
   }
-
-  for (auto byte : m_assembled_bytes) {
-    std::cerr << std::hex << std::uppercase << static_cast<int>(byte) << " ";
-  }
-
-  std::cerr << "\n++++assembled\n";
 }
 
 void Statement::assemble(const ControlSection &section) {
@@ -380,7 +362,7 @@ void Statement::assemble(const ControlSection &section) {
     break;
   }
   default:
-    NOT_REACHED("Invalid statement");
+    section.assembler_error("Invalid statement", *this);
   }
 
   // std::cerr << "Instruction: " << m_mnemonic << " Opcode: " << opcode <<

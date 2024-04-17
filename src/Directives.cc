@@ -25,8 +25,7 @@ void start(Statement &statement, ControlSection &section) {
   if (section.location_counter() != -1) {
     std::cerr << "Location counter is already set to "
               << section.location_counter() << "\n";
-    assert(false &&
-           "START directive must be the first directive in the program");
+    section.assembler_error("There can only be one START directive", statement);
   }
 
   const auto operand = statement.operand();
@@ -47,7 +46,8 @@ void end(Statement &statement, ControlSection &section) {
 
   if (section.location_counter() == -1) {
     std::cerr << "Location counter is not set\n";
-    assert(false && "END directive must be after START directive");
+    section.assembler_error("END directive without a START directive",
+                            statement);
   }
 
   section.process_pending_literals_next();
@@ -83,7 +83,7 @@ void word(Statement &statement, ControlSection &section) {
     return;
   }
 
-  const auto& op = statement.operand();
+  const auto &op = statement.operand();
 
   if (op[1] == '\'') {
     // Format of "X'...'" or "C'...'""
@@ -93,7 +93,9 @@ void word(Statement &statement, ControlSection &section) {
     statement.bytes_from_direct_value(value.value());
   }
 
-  assert(statement.bytes().size() == 3 && "Invalid word directive");
+  if (statement.bytes().size() != 3) {
+    section.assembler_error("Invalid WORD directive", statement);
+  }
 }
 
 void resb(Statement &statement, ControlSection &section) {
@@ -122,7 +124,9 @@ void byte(Statement &statement, ControlSection &section) {
     statement.bytes_from_direct_value(value.value());
   }
 
-  assert(statement.bytes().size() == 1 && "Invalid byte directive");
+  if (statement.bytes().size() != 1) {
+    section.assembler_error("Invalid BYTE directive", statement);
+  }
 }
 
 void ltorg(Statement &statement, ControlSection &section) {
@@ -144,6 +148,10 @@ void equ(Statement &statement, ControlSection &section) {
 
   if (statement.operand() == "*") {
     // Set the label to the current location counter
+    auto label = statement.label();
+    if (section.get_symbol(label) != nullptr) {
+      section.assembler_error("Symbol already defined", statement);
+    }
     section.define_symbol(statement.label(), section.location_counter(),
                           SymbolType::RELATIVE);
   } else {
