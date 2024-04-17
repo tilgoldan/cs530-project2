@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -33,7 +34,7 @@ splitStringAlongDelimiters(const std::string &input,
 
 std::vector<std::string> splitString(const std::string &input, char delimiter) {
   std::vector<std::string> result;
-  std::stringstream ss = std::stringstream(input);
+  std::stringstream ss(input);
   std::string item;
 
   while (std::getline(ss, item, delimiter)) {
