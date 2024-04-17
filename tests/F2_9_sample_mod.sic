@@ -1,6 +1,6 @@
 . Figure 2.9 Program demonstrating additional assembler features.
 COPY      START   0                      COPY FILE FROM INPUT TO OUTPUT
-          EXTREF  HALLO
+          EXTREF  HALLO,MOIN
 FIRST     STL     RETADR
           LDB    #LENGTH
           BASE    LENGTH
@@ -22,6 +22,7 @@ LENGTH    RESW    1
 BUFFER    RESB    4096
 BUFEND    EQU     *
 MAXLEN    EQU     BUFEND-BUFFER
+MAXLED    EQU     MAXLEN+10
 .
 .         SUBROUTINE TO READ RECORD INTO BUFFER
 .
@@ -40,6 +41,14 @@ RLOOP     TD      INPUT
 EXIT      STX     LENGTH
           RSUB
 INPUT     BYTE    X'F1'
+          WORD    1337
+          WORD    0
+          WORD
+          WORD    -23123
+          BYTE    1337
+          BYTE    0
+          BYTE
+          BYTE    -23123
 .
 .         SUBROUTINE TO WRITE RECORD FROM BUFFER
 .

@@ -13,6 +13,7 @@ File: Statement.cc
 #include <iostream>
 #include <ostream>
 #include <system_error>
+#include <valarray>
 
 #include "Directives.hh"
 #include "Instructions.hh"
@@ -232,7 +233,7 @@ void Statement::bytes_from_direct_value(int32_t value) {
     shift -= 8;
   }
 
-  assert(m_assembled_bytes.size() == m_size);
+  assert(m_assembled_bytes.size() == (size_t) m_size);
 }
 
 void Statement::assemble_memory_instruction(const SymbolTab &symbol_table,

@@ -35,7 +35,7 @@ SymbolInfo parse_value(std::string s, ControlSection &section) {
 
   int32_t value = 0;
 
-  for (int i = 0; i < vec.size(); i++) {
+  for (size_t i = 0; i < vec.size(); i++) {
     if (i == 0 && vec[i] == "-") {
       negative = true;
       continue;
@@ -97,7 +97,7 @@ SymbolInfo parse_value(std::string s, ControlSection &section) {
     value = -value;
   }
 
-  return SymbolInfo(value, SymbolType::ABSOLUTE);
+  return SymbolInfo(value, final_type);
 }
 
 void start(Statement &statement, ControlSection &section) {
