@@ -56,7 +56,7 @@ Statement::Statement(const std::string &line, int32_t location)
   m_type = find_type();
 
   if (m_type == StatementType::LITERAL) {
-    parse_literal();
+    parse_literal_instr();
   }
 
   find_size();
@@ -104,13 +104,7 @@ StatementType Statement::find_type() {
   return StatementType::INVALID;
 }
 
-void Statement::parse_literal() {
-  assert(m_label == "*");
-
-  // Starting '='
-  assert(m_mnemonic_prefix == '=');
-  auto data = m_mnemonic;
-
+void Statement::parse_literal_data(std::string data) {
   // Format
   LiteralFormat format;
   switch (data[0]) {
@@ -147,6 +141,15 @@ void Statement::parse_literal() {
   }
 }
 
+void Statement::parse_literal_instr() {
+  assert(m_label == "*");
+
+  // Starting '='
+  assert(m_mnemonic_prefix == '=');
+
+  parse_literal_data(m_mnemonic);
+}
+
 void Statement::find_size() {
   int32_t size = 0;
 
@@ -176,8 +179,7 @@ void Statement::find_size() {
   m_size = size;
 }
 
-int32_t Statement::parse_immediate_value(
-    const SymbolTab &symbol_table) {
+int32_t Statement::parse_immediate_value(const SymbolTab &symbol_table) {
 
   assert(m_addressing_mode.immediate);
   assert(!m_operand.empty());
@@ -224,15 +226,14 @@ void Statement::assemble_register_instruction() {
   m_assembled_bytes.push_back(r1 << 4 | r2);
 }
 
-void Statement::assemble_memory_instruction(
-    const SymbolTab &symbol_table,
-    const LiteralTab &literal_table,
-    const std::string &base_register) {
+void Statement::assemble_memory_instruction(const SymbolTab &symbol_table,
+                                            const LiteralTab &literal_table,
+                                            const std::string &base_register) {
 
   assert(m_type == StatementType::FORMAT3 || m_type == StatementType::FORMAT4);
 
   const auto &instructions = Instructions::the();
-  auto& instr = instructions.at(m_mnemonic);
+  auto &instr = instructions.at(m_mnemonic);
   auto opcode = instr.opcode;
 
   std::string operand = m_operand;
@@ -323,7 +324,7 @@ output_bytes:
 void Statement::assemble(const SymbolTab &symbol_table,
                          const LiteralTab &literal_table,
                          const std::string &base_register) {
-  const auto& instructions = Instructions::the();
+  const auto &instructions = Instructions::the();
 
   switch (m_type) {
   case StatementType::LITERAL:

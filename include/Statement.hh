@@ -61,6 +61,7 @@ public:
   const std::vector<uint8_t>& bytes() const { return m_assembled_bytes;}
 
   void print_assembled(std::ostream &) const;
+  void parse_literal_data(std::string);
 
 private:
   int32_t m_location;
@@ -81,7 +82,7 @@ private:
   StatementType find_type();
   void find_size();
   void find_addressing_mode();
-  void parse_literal();
+  void parse_literal_instr();
 
   int32_t parse_immediate_value(const SymbolTab &);
 

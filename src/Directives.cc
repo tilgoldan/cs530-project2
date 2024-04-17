@@ -16,12 +16,24 @@ File: Directives.cc
 #include <iostream>
 #include <map>
 
-void parse_value(std::string s) {
+SymbolInfo parse_value(std::string s) {
   // value can be: constant, other symbol, or an expression
-  //NOT_IMPLEMENTED("parse_value");
+  // NOT_IMPLEMENTED("parse_value");
+
+  // Expressions can be classified as absolute
+  // expressions or relative expressions MAXLEN EQU BUFEND - BUFFER
+  // – BUFEND and BUFFER both are relative terms,
+  //       representing addresses within the program
+  // – However the expression BUFEND - BUFFER represents an absolute value
+  // • When relative terms are paired with opposite signs,
+  //       the dependency on the program starting addres
+
+  std::cerr << "TODO: parse_value\n";
+
+  return SymbolInfo(0xdeadc0de, Symbol::ABSOLUTE);
 }
 
-void dir_start(Statement &statement, ControlSection &section) {
+void start(Statement &statement, ControlSection &section) {
 
   if (section.current_pass() != Pass::FIRST) {
     return;
@@ -42,7 +54,7 @@ void dir_start(Statement &statement, ControlSection &section) {
   section.set_name(statement.label());
 }
 
-void dir_end(Statement &statement, ControlSection &section) {
+void end(Statement &statement, ControlSection &section) {
 
   (void)statement;
 
@@ -60,7 +72,7 @@ void dir_end(Statement &statement, ControlSection &section) {
   section.set_end_address(section.location_counter());
 }
 
-void dir_base(Statement &statement, ControlSection &section) {
+void base(Statement &statement, ControlSection &section) {
   (void)statement;
 
   if (section.current_pass() != Pass::SECOND) {
@@ -70,7 +82,7 @@ void dir_base(Statement &statement, ControlSection &section) {
   section.set_base_relative_label(statement.operand());
 }
 
-void dir_resw(Statement &statement, ControlSection &section) {
+void resw(Statement &statement, ControlSection &section) {
   if (section.current_pass() != Pass::FIRST) {
     return;
   }
@@ -80,7 +92,7 @@ void dir_resw(Statement &statement, ControlSection &section) {
   statement.set_size(size * 3);
 }
 
-void dir_word(Statement &statement, ControlSection &section) {
+void word(Statement &statement, ControlSection &section) {
   (void)section;
 
   if (section.current_pass() == Pass::FIRST) {
@@ -88,10 +100,12 @@ void dir_word(Statement &statement, ControlSection &section) {
     return;
   }
 
-  NOT_IMPLEMENTED("word directive 2nd pass");
+  statement.parse_literal_data(statement.operand());
+
+  assert(statement.bytes().size() == 3 && "Invalid word directive");
 }
 
-void dir_resb(Statement &statement, ControlSection &section) {
+void resb(Statement &statement, ControlSection &section) {
   if (section.current_pass() != Pass::FIRST) {
     return;
   }
@@ -101,27 +115,18 @@ void dir_resb(Statement &statement, ControlSection &section) {
   statement.set_size(size);
 }
 
-void dir_byte(Statement &statement, ControlSection &section) {
+void byte(Statement &statement, ControlSection &section) {
   if (section.current_pass() == Pass::FIRST) {
     statement.set_size(1);
     return;
   }
 
-  // Second pass
-  // NOT_IMPLEMENTED("byte directive 2nd pass");
+  statement.parse_literal_data(statement.operand());
 
-  // const auto operand = statement.operand();
-  // if (operand[0] == 'C') {
-  //   statement.set_size(operand.size() - 3);
-  // } else if (operand[0] == 'X') {
-  //   statement.set_size((operand.size() - 3) / 2);
-  // } else {
-  //   std::cerr << "Invalid BYTE operand: " << operand << "\n";
-  //   assert(false && "Invalid BYTE operand");
-  // }
+  assert(statement.bytes().size() == 1 && "Invalid byte directive");
 }
 
-void dir_ltorg(Statement &statement, ControlSection &section) {
+void ltorg(Statement &statement, ControlSection &section) {
   (void)statement;
 
   if (section.current_pass() != Pass::FIRST) {
@@ -131,56 +136,40 @@ void dir_ltorg(Statement &statement, ControlSection &section) {
   section.process_pending_literals_next();
 }
 
-void dir_equ(Statement &statement, ControlSection &section) {
+void equ(Statement &statement, ControlSection &section) {
   (void)statement;
 
   if (section.current_pass() != Pass::FIRST) {
     return;
   }
-
-  // Expressions can be classified as absolute
-  // expressions or relative expressions MAXLEN EQU BUFEND - BUFFER
-// – BUFEND and BUFFER both are relative terms,
-//       representing addresses within the program
-// – However the expression BUFEND - BUFFER represents an absolute value
-// • When relative terms are paired with opposite signs,
-//       the dependency on the program starting addres
-
-              std::cerr
-          << "TODO: EQU\n";
-  parse_value("");
 
   if (statement.operand() == "*") {
     // Set the label to the current location counter
-    //section.define_label(statement.label(), section.location_counter());
+    section.define_symbol(statement.label(), section.location_counter(),
+                          Symbol::RELATIVE);
   } else {
-    // Evaluate the expression
-    // TODO
-    section.define_symbol(statement.label(), 0xdeadc0de, Symbol::RELATIVE);
+    auto info = parse_value(statement.operand());
+    section.define_symbol(statement.label(), info.address(), info.type());
   }
 }
 
-void dir_org(Statement &statement, ControlSection &section) {
+void org(Statement &statement, ControlSection &section) {
   (void)statement;
 
   if (section.current_pass() != Pass::FIRST) {
     return;
   }
 
-  // – indirectly assign values to symbols
-  // – reset the location counter to the specified value
-  // – Usage : ORG value
-
-  std::cerr << "TODO: ORG\n";
-  parse_value("");
+  auto info = parse_value(statement.operand());
+  section.set_location_counter(info.address());
 }
 
 std::map<std::string, DirectiveHandler> &Directives::the() {
   static std::map<std::string, DirectiveHandler> s_directives = {
-      {"START", dir_start}, {"END", dir_end},   {"BASE", dir_base},
-      {"RESW", dir_resw},   {"RESB", dir_resb}, {"BYTE", dir_byte},
-      {"WORD", dir_word},   {"ORG", dir_org},   {"LTORG", dir_ltorg},
-      {"EQU", dir_equ},
+      {"START", start}, {"END", end},   {"BASE", base},
+      {"RESW", resw},   {"RESB", resb}, {"BYTE", byte},
+      {"WORD", word},   {"ORG", org},   {"LTORG", ltorg},
+      {"EQU", equ},
   };
   return s_directives;
 }
