@@ -34,4 +34,7 @@
 # Build files
 build/
 
+*.l
+*.st
+
 .DS_Store
