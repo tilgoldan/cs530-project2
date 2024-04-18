@@ -12,6 +12,27 @@ File manifest
 Project2
 ├── Makefile
 ├── README
+├── compile_flags.txt
+├── include
+│   ├── ControlSection.hh
+│   ├── Directives.hh
+│   ├── Instructions.hh
+│   ├── Literal.hh
+│   ├── Statement.hh
+│   ├── Symbol.hh
+│   └── helper.hh
+├── src
+│   ├── ControlSection.cc
+│   ├── Directives.cc
+│   ├── Instructions.cc
+│   ├── Statement.cc
+│   ├── helper.cc
+│   └── main.cc
+└── tests
+    ├── F2_9_sample.sic
+    ├── P2sample.l.test
+    ├── P2sample.sic
+    └── P2sample.st.test
 
 ===========
 Compilation
@@ -28,6 +49,19 @@ $ make
 Operation
 =========
 
+After compilation, the assembler is located at ./build/bin/asxe.
+
+> ./build/bin/asxe
+Assemble SIC/XE assembly code into object code.
+Usage: asxe <file> [<file> ...]
+
+> ./build/bin/asxe ./tests/P2sample.sic
+Read 584 bytes from ./tests/P2sample.sic
+Pass 1 complete for ./tests/P2sample.sic
+Pass 2 complete for ./tests/P2sample.sic
+Wrote object code: ./tests/P2sample.l
+Wrote symbol table: ./tests/P2sample.st
+
 =====
 Notes
 =====
@@ -39,3 +73,9 @@ Line breaks are done by printing "\n" instead of using "std::endl" to
 avoid unnecessary flushes of the output buffer.
 
 No C-style casts.
+
+================
+Missing Features
+================
+- No macro support
+- No support for multiple program blocks (USE directive)
