@@ -8,16 +8,14 @@ File: Literal.hh
 */
 #pragma once
 
+#include <map>
 #include <string>
 #include <vector>
-#include <map>
 
 class LiteralInfo {
 public:
-  LiteralInfo()
-      : m_address(-1) {}
-  LiteralInfo(int32_t address)
-      : m_address(address) {}
+  LiteralInfo() : m_address(-1) {}
+  LiteralInfo(int32_t address) : m_address(address) {}
 
   int32_t address() const { return m_address; }
   void set_address(int32_t address) { m_address = address; }

@@ -23,7 +23,8 @@ File: Statement.cc
 #include "Symbol.hh"
 #include "helper.hh"
 
-Statement::Statement(const std::string &line, int32_t location, int32_t line_number)
+Statement::Statement(const std::string &line, int32_t location,
+                     int32_t line_number)
     : m_line_number(line_number), m_location(location), m_size(0) {
   m_type = StatementType::INVALID;
   m_raw = line;
@@ -279,7 +280,8 @@ void Statement::assemble_memory_instruction(const ControlSection &section) {
     target = section.parse_value(operand);
   }
 
-  // std::cerr << "Target Address: " << std::hex << "0x" << target.value() << "\n";
+  // std::cerr << "Target Address: " << std::hex << "0x" << target.value() <<
+  // "\n";
 
   if (m_addressing_mode.extended) {
     flag_nibble |= 0x01;

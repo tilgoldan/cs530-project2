@@ -101,4 +101,4 @@ private:
   std::string m_base_relative_label;
 
   void define_pending_literals();
-  };
+};

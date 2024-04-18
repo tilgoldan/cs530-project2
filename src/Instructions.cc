@@ -14,8 +14,8 @@ File: Instructions.cc
 
 std::map<std::string, int32_t> &Instructions::regs() {
   static std::map<std::string, int32_t> s_regs = {
-      {"A", 0}, {"X", 1}, {"L", 2}, {"B", 3}, {"S", 4}, {"T", 5}, {"F", 6},
-      {"PC", 8}, {"SW", 9},
+      {"A", 0}, {"X", 1}, {"L", 2},  {"B", 3},  {"S", 4},
+      {"T", 5}, {"F", 6}, {"PC", 8}, {"SW", 9},
   };
   return s_regs;
 }
