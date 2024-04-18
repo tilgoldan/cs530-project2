@@ -195,7 +195,7 @@ void ControlSection::first_pass() {
 
   std::istringstream i_stream(m_raw);
 
-  if (!i_stream) {
+  if (!i_stream.good()) {
     assembler_error("Failed to open file");
   }
 
@@ -393,7 +393,7 @@ void ControlSection::print_tables(std::ostream &os) const {
 
 void ControlSection::assembler_error(const std::string &message) const {
   std::cerr << m_path;
-  std::cerr << " error: " << message << "\n";
+  std::cerr << ": error: " << message << "\n";
 
   std::exit(1);
 }
@@ -407,7 +407,7 @@ void ControlSection::assembler_error(const std::string &message,
   }
   std::cerr << ": error: " << message << "\n";
 
-  std::cerr << "Statement:\n";
+  std::cerr << "at statement:\n";
   std::cerr << stmt.raw() << "\n";
 
   std::exit(1);
