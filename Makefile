@@ -1,5 +1,5 @@
-# Written-By: Til Goldan
-# Written-By: Jasmine McDuffie
+# Written-By: Til Goldan (131473651)
+# Written-By: Jasmine McDuffie (825467728)
 # Class: CS530, Spring 2024
 # Assignment: 2
 # User: cssc4033
